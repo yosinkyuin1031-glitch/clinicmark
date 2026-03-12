@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "lastChecked": "2026-03-12T00:00:00.000Z",
+    "note": "このファイルはスケジュールタスクにより自動更新されます"
+  },
+  "imageModels": [
+    {
+      "value": "openai",
+      "label": "OpenAI",
+      "badge": "gpt-image-1",
+      "desc": "高品質・安定した画像生成",
+      "envKey": "OPENAI_API_KEY",
+      "apiModel": "gpt-image-1",
+      "available": true,
+      "supportsEdit": true
+    },
+    {
+      "value": "gemini",
+      "label": "Nano Banana Pro",
+      "badge": "Gemini",
+      "desc": "日本語テキスト描画が得意・最新Geminiモデル",
+      "envKey": "GEMINI_API_KEY",
+      "apiModel": "gemini-2.0-flash-preview-image-generation",
+      "available": true,
+      "supportsEdit": true
+    }
+  ],
+  "textModels": [
+    {
+      "value": "claude",
+      "label": "Claude",
+      "badge": "claude-3-5-sonnet-20241022",
+      "desc": "日本語コンテンツ生成メイン",
+      "envKey": "ANTHROPIC_API_KEY",
+      "apiModel": "claude-3-5-sonnet-20241022",
+      "available": true
+    }
+  ]
+}

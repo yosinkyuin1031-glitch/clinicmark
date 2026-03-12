@@ -1,0 +1,335 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════
+// 院マスタ
+// ═══════════════════════════════════════════════════════
+model Clinic {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique // "oguchi" | "seiyo"
+  color     String   // HEX: ブランドカラー
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  brandEntries      BrandEntry[]
+  brandProfile      ClinicBrandProfile?
+  contentTemplates  ContentTemplate[]
+  generatedContents GeneratedContent[]
+  promptLogs        PromptLog[]
+  users             UserClinic[]
+  contentMaps       ContentMap[]
+  flyers            Flyer[]
+  lineTemplates     LineTemplate[]
+  lineScenarios     LineScenario[]
+  patients          Patient[]
+
+  @@map("clinics")
+}
+
+// ═══════════════════════════════════════════════════════
+// 院ブランドプロフィール（構造化フィールド）
+// ═══════════════════════════════════════════════════════
+model ClinicBrandProfile {
+  id                 String   @id @default(cuid())
+  clinicId           String   @unique
+  clinic             Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  description        String   @default("")  // 院の説明
+  brandTone          String   @default("")  // ブランドトーン
+  primaryKeywords    String   @default("")  // 主要キーワード（改行区切り）
+  areaKeywords       String   @default("")  // 地域キーワード（改行区切り）
+  greeting           String   @default("")  // 固定挨拶文
+  ctaText            String   @default("")  // CTA文
+  recommendedPhrases String   @default("")  // 推奨表現（改行区切り）
+  forbiddenPhrases   String   @default("")  // 禁止表現（改行区切り）
+  notes              String   @default("")  // 備考
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("clinic_brand_profiles")
+}
+
+// ═══════════════════════════════════════════════════════
+// ブランド辞書エントリ
+// ═══════════════════════════════════════════════════════
+// SQLite では enum を String として定義
+// 値: TONE | TARGET | SERVICE | KEYWORD | TAGLINE | NG_WORD
+
+model BrandEntry {
+  id        String   @id @default(cuid())
+  clinicId  String
+  category  String   // BrandCategory
+  key       String
+  value     String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, category])
+  @@map("brand_entries")
+}
+
+// ═══════════════════════════════════════════════════════
+// プロンプトテンプレート
+// ContentType 値: FAQ | INSTAGRAM_POST | INSTAGRAM_STORY |
+//   META_AD | LP_SECTION | IMAGE_PROMPT | HP_CHECK |
+//   COMPETITOR_MEMO | MONTHLY_REVIEW | SEMINAR_SCRIPT
+// ═══════════════════════════════════════════════════════
+model ContentTemplate {
+  id             String   @id @default(cuid())
+  clinicId       String?
+  type           String   // ContentType
+  name           String
+  description    String   @default("")
+  promptTemplate String
+  variables      String   // JSON文字列: TemplateVariable[]
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  clinic            Clinic?            @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  generatedContents GeneratedContent[]
+
+  @@index([clinicId, type])
+  @@map("content_templates")
+}
+
+// ═══════════════════════════════════════════════════════
+// 生成済みコンテンツ
+// ContentStatus 値: DRAFT | APPROVED | ARCHIVED
+// ═══════════════════════════════════════════════════════
+model GeneratedContent {
+  id          String   @id @default(cuid())
+  clinicId    String
+  templateId  String?
+  type        String   // ContentType
+  title       String
+  inputParams String   // JSON文字列
+  output      String
+  status      String   @default("DRAFT") // ContentStatus
+  rating      String   @default("none")  // "good" | "bad" | "none"
+  tags        String   @default("[]")    // JSON文字列: string[]
+  note        String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clinic   Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  template ContentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  logs     PromptLog[]
+
+  @@index([clinicId, type, status])
+  @@map("generated_contents")
+}
+
+// ═══════════════════════════════════════════════════════
+// AI呼び出しログ
+// ═══════════════════════════════════════════════════════
+model PromptLog {
+  id           String   @id @default(cuid())
+  clinicId     String
+  contentId    String?
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  durationMs   Int
+  createdAt    DateTime @default(now())
+
+  clinic  Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  content GeneratedContent? @relation(fields: [contentId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, createdAt])
+  @@map("prompt_logs")
+}
+
+// ═══════════════════════════════════════════════════════
+// 認証
+// ═══════════════════════════════════════════════════════
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("staff")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clinics UserClinic[]
+
+  @@map("users")
+}
+
+model UserClinic {
+  userId   String
+  clinicId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@id([userId, clinicId])
+  @@map("user_clinics")
+}
+
+// ═══════════════════════════════════════════════════════
+// チラシ管理
+// flyerType 値: A4 | A5 | DM | web | leaflet
+// status 値: DRAFT | APPROVED | ARCHIVED
+// ═══════════════════════════════════════════════════════
+model Flyer {
+  id          String   @id @default(cuid())
+  clinicId    String
+  title       String
+  flyerType   String   @default("A4")     // A4 | A5 | DM | web | leaflet
+  catchCopy   String   @default("")       // AI生成：キャッチコピー
+  bodyText    String   @default("")       // AI生成：本文（表面）
+  backText    String   @default("")       // AI生成：裏面テキスト
+  ctaText     String   @default("")       // CTA文
+  targetText  String   @default("")       // ターゲット説明
+  designNotes String   @default("")       // デザインメモ・画像指示
+  fileUrl     String   @default("")       // アップロードファイル相対パス
+  status      String   @default("DRAFT")  // DRAFT | APPROVED | ARCHIVED
+  tags        String   @default("[]")     // JSON string[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId])
+  @@map("flyers")
+}
+
+// ═══════════════════════════════════════════════════════
+// LINE テンプレート
+// category 値: greeting | reminder | follow_up | reactivation | promotion | custom
+// ═══════════════════════════════════════════════════════
+model LineTemplate {
+  id           String   @id @default(cuid())
+  clinicId     String
+  title        String
+  category     String   // greeting | reminder | follow_up | reactivation | promotion | custom
+  message      String   // メッセージ本文
+  quickReplies String   @default("[]")   // JSON: [{label: string, text: string}]
+  isActive     Boolean  @default(true)
+  tags         String   @default("[]")   // JSON string[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, category])
+  @@map("line_templates")
+}
+
+// ═══════════════════════════════════════════════════════
+// ステップLINE シナリオ
+// scenarioType 値: pre_visit | post_visit | dormant | custom
+// ═══════════════════════════════════════════════════════
+model LineScenario {
+  id           String     @id @default(cuid())
+  clinicId     String
+  title        String
+  scenarioType String     // pre_visit | post_visit | dormant | custom
+  description  String     @default("")
+  triggerMemo  String     @default("")    // 発火条件メモ（例: 初回予約完了後）
+  isActive     Boolean    @default(true)
+  steps        LineStep[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId])
+  @@map("line_scenarios")
+}
+
+model LineStep {
+  id         String   @id @default(cuid())
+  scenarioId String
+  stepNumber Int
+  title      String
+  message    String
+  delayDays  Int      @default(0)    // 前ステップからの遅延日数
+  delayHours Int      @default(0)    // 遅延時間（時間）
+  condition  String   @default("")   // 配信条件メモ（任意）
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  scenario LineScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@index([scenarioId])
+  @@map("line_steps")
+}
+
+// ═══════════════════════════════════════════════════════
+// 患者管理（Patient CRM）
+// ═══════════════════════════════════════════════════════
+model Patient {
+  id          String   @id @default(cuid())
+  clinicId    String
+  name        String
+  kana        String   @default("")
+  phone       String   @default("")
+  symptom     String   @default("")
+  memo        String   @default("")
+  visitCount  Int      @default(0)
+  lastVisitAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clinic Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  visits PatientVisit[]
+
+  @@index([clinicId])
+  @@map("patients")
+}
+
+model PatientVisit {
+  id          String   @id @default(cuid())
+  patientId   String
+  visitedAt   DateTime @default(now())
+  sessionNote String   @default("")   // 施術メモ・患者の声
+  nextAction  String   @default("")   // 次回のアクション
+  createdAt   DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@map("patient_visits")
+}
+
+// ═══════════════════════════════════════════════════════
+// コンテンツ管理マップ
+// contentType 値: blog | video | gmb | instagram | faq
+// status 値: planned | creating | published
+// ═══════════════════════════════════════════════════════
+model ContentMap {
+  id          String   @id @default(cuid())
+  clinicId    String
+  title       String
+  contentType String   // blog | video | gmb | instagram | faq
+  symptom     String   @default("")
+  theme       String   @default("")
+  target      String   @default("")
+  urlOrMemo   String   @default("")
+  status      String   @default("planned") // planned | creating | published
+  tags        String   @default("[]")      // JSON string[]
+  note        String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, contentType, status])
+  @@map("content_maps")
+}
