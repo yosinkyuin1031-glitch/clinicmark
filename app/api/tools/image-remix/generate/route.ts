@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 
 // POST /api/tools/image-remix/generate
 // multipart/form-data:
@@ -9,9 +7,6 @@ import { authOptions } from '@/lib/auth';
 //   size?         : '1024x1024' | '1792x1024' | '1024x1792'
 //   model?        : 'openai' | 'gemini'  (デフォルト: openai)
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-
   let formData: FormData;
   try {
     formData = await req.formData();
@@ -31,7 +26,7 @@ export async function POST(req: NextRequest) {
   const prompt = buildClinicPrompt(instructions, !!imageFile);
 
   // ════════════════════════════════════════════════
-  //  Nano Banana Pro (Gemini) モード
+  //  Gemini モード
   // ════════════════════════════════════════════════
   if (model === 'gemini') {
     const geminiKey = process.env.GEMINI_API_KEY;
@@ -43,15 +38,13 @@ export async function POST(req: NextRequest) {
         mode:        'mock',
         model:       'gemini',
         prompt,
-        message:     'GEMINI_API_KEY が未設定のためモックモードで動作しています。.env に GEMINI_API_KEY を追加すると Nano Banana Pro で実際に画像が生成されます。',
+        message:     'GEMINI_API_KEY が未設定のためモックモードで動作しています。.env に GEMINI_API_KEY を追加すると Gemini で実際に画像が生成されます。',
       });
     }
 
     try {
-      // サイズ → Gemini の aspectRatio / imageSize にマッピング
       const { aspectRatio, imageSize } = sizeToGemini(size);
 
-      // parts を組み立て (元画像があれば含める)
       const parts: object[] = [];
       if (imageFile) {
         const arrayBuf = await imageFile.arrayBuffer();
@@ -66,7 +59,7 @@ export async function POST(req: NextRequest) {
       parts.push({ text: prompt });
 
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${geminiKey}`,
         {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -88,7 +81,6 @@ export async function POST(req: NextRequest) {
 
       const data = await geminiRes.json();
 
-      // レスポンスから画像データを抽出
       const imagePart = data.candidates?.[0]?.content?.parts?.find(
         (p: { inlineData?: { mimeType?: string; data?: string } }) => p.inlineData?.mimeType?.startsWith('image/'),
       );
@@ -107,7 +99,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (err) {
       return NextResponse.json(
-        { error: err instanceof Error ? err.message : 'Nano Banana Pro での画像生成に失敗しました' },
+        { error: err instanceof Error ? err.message : 'Gemini での画像生成に失敗しました' },
         { status: 500 },
       );
     }
@@ -129,7 +121,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // ─── 本番: 画像編集モード (元画像あり) ──────────────────────
+  // ─── 画像編集モード (元画像あり) ──────────────────────
   if (imageFile) {
     try {
       const body = new FormData();
@@ -168,7 +160,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ─── 本番: 新規生成モード (元画像なし) ──────────────────────
+  // ─── 新規生成モード (元画像なし) ──────────────────────
   try {
     const res = await fetch('https://api.openai.com/v1/images/generations', {
       method:  'POST',

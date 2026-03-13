@@ -7,8 +7,8 @@ import { IS_MOCK_MODE } from '@/lib/ai/client';
 const MOCK_TRANSCRIPTION = `毎朝起きると首と肩がパンパンで、仕事中も頭痛が続いてしまって本当につらいんですよね。デスクワークが多くて一日中パソコンの前に座っているので、それが原因かなとは思っているんですけど。夜はしっかり寝ているのに、翌朝にはまた同じ状態で、もう諦めていました。整体は初めてなんですが、こんなに長く続いている症状でも施術してもらえますか？`;
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const startTime = Date.now();
 

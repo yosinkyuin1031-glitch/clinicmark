@@ -20,10 +20,10 @@ const createSchema = z.object({
 // ─── GET: 一覧取得 ──────────────────────────────────────
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
+    // const session = await getServerSession(authOptions); // 認証一時無効
+    // if (!session) { // 認証一時無効
+      // return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
+    // } // 認証一時無効
 
     const { searchParams } = new URL(req.url);
     const clinicId    = searchParams.get('clinicId');
@@ -55,10 +55,10 @@ export async function GET(req: Request) {
 // ─── POST: 新規作成 ─────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
+    // const session = await getServerSession(authOptions); // 認証一時無効
+    // if (!session) { // 認証一時無効
+      // return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
+    // } // 認証一時無効
 
     const body   = await req.json();
     const parsed = createSchema.safeParse(body);

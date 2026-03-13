@@ -21,10 +21,10 @@ type RouteContext = { params: Promise<{ id: string }> };
 // ─── PUT: 更新 ──────────────────────────────────────────
 export async function PUT(req: Request, context: RouteContext) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
+    // const session = await getServerSession(authOptions); // 認証一時無効
+    // if (!session) { // 認証一時無効
+      // return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
+    // } // 認証一時無効
 
     const { id } = await context.params;
 
@@ -55,10 +55,10 @@ export async function PUT(req: Request, context: RouteContext) {
 // ─── DELETE: 削除 ──────────────────────────────────────
 export async function DELETE(_req: Request, context: RouteContext) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-    }
+    // const session = await getServerSession(authOptions); // 認証一時無効
+    // if (!session) { // 認証一時無効
+      // return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
+    // } // 認証一時無効
 
     const { id } = await context.params;
 

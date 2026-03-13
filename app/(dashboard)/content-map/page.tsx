@@ -22,7 +22,7 @@ type ViewMode = 'table' | 'matrix';
 
 const EMPTY_FORM: Omit<ContentMapInput, 'clinicId'> = {
   title:       '',
-  contentType: 'blog',
+  contentType: 'instagram',
   symptom:     '',
   theme:       '',
   target:      '',

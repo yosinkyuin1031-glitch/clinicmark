@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  BookOpen, FileText, Instagram, Archive,
-  Sparkles, TrendingUp, Clock, Megaphone, LayoutTemplate, LayoutGrid,
+  BookOpen, Instagram, Archive,
+  Sparkles, TrendingUp, Clock, Megaphone, LayoutGrid, Video, AtSign,
 } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { useSession } from 'next-auth/react';
@@ -12,11 +12,11 @@ import { getClinicColor, cn, formatDate } from '@/lib/utils/clinic';
 import { CONTENT_TYPE_LABELS, type GeneratedContent, type ContentType } from '@/types';
 
 const QUICK_ACTIONS = [
-  { href: '/generate/multi',     label: '一括生成',            icon: LayoutGrid,      desc: '複数媒体を一度にまとめて生成' },
-  { href: '/generate/faq',       label: 'FAQ・症状ページ',    icon: FileText,        desc: 'SEO対応の症状ページを作成' },
+  { href: '/generate/multi',     label: '一括生成',            icon: LayoutGrid,      desc: '複数SNSを一度にまとめて生成' },
   { href: '/generate/instagram', label: 'Instagram台本',      icon: Instagram,       desc: 'フィード・ストーリーズ台本' },
+  { href: '/generate/video-ad',  label: '動画クリエイティブ',  icon: Video,           desc: 'Instagram・YouTube動画台本' },
   { href: '/generate/meta-ad',   label: 'Meta広告コピー',     icon: Megaphone,       desc: 'Facebook/Instagram 広告3案' },
-  { href: '/generate/lp',        label: 'LPセクション',       icon: LayoutTemplate,  desc: 'LP各セクションの原稿を作成' },
+  { href: '/threads',            label: 'Threads自動投稿',    icon: AtSign,          desc: 'Threadsへの自動投稿管理' },
   { href: '/brand',              label: 'ブランド辞書',        icon: BookOpen,        desc: '院のブランド情報を管理' },
   { href: '/library',            label: 'コンテンツライブラリ', icon: Archive,        desc: '過去の生成物を確認' },
 ];
@@ -57,7 +57,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold">
           {currentClinic ? currentClinic.name : 'ClinicMark'}
         </h1>
-        <p className="text-sm opacity-70 mt-1">院内マーケティング支援ツール</p>
+        <p className="text-sm opacity-70 mt-1">SNSマーケティング支援ツール</p>
       </div>
 
       {/* 統計 */}

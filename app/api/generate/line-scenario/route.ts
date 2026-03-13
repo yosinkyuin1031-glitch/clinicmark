@@ -6,8 +6,8 @@ import { generateLineScenario } from '@/lib/ai/lineScenarioGenerator';
 import type { ScenarioGenInput } from '@/types';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const body: ScenarioGenInput = await req.json();
   const { clinicId, scenarioType, theme, target, stepCount, tone } = body;

@@ -24,7 +24,7 @@ const WRITING_STYLE_OPTIONS = [
 ] as const;
 
 // デフォルト選択媒体
-const DEFAULT_MEDIA: MediaType[] = ['faq', 'seo_title', 'seo_desc', 'instagram'];
+const DEFAULT_MEDIA: MediaType[] = ['instagram', 'instagram_story', 'threads', 'meta_ad'];
 
 export default function MultiGeneratePage() {
   const { currentClinic } = useClinic();
@@ -116,8 +116,8 @@ export default function MultiGeneratePage() {
               <LayoutGrid size={15} className="text-white" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-slate-900">一括コンテンツ生成</h1>
-              <p className="text-xs text-slate-500">最大19媒体を一度に生成</p>
+              <h1 className="text-base font-bold text-slate-900">SNS一括生成</h1>
+              <p className="text-xs text-slate-500">複数SNSのコンテンツを一度に生成</p>
             </div>
           </div>
 
@@ -169,24 +169,6 @@ export default function MultiGeneratePage() {
               placeholder="例: 大阪、堺市"
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
             />
-          </div>
-
-          {/* FAQ数 */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">
-              FAQ数 <span className="text-slate-400 font-normal">({faqCount}件)</span>
-            </label>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              value={faqCount}
-              onChange={(e) => setFaqCount(Number(e.target.value))}
-              className="w-full accent-slate-700"
-            />
-            <div className="flex justify-between text-xs text-slate-400 mt-0.5">
-              <span>1</span><span>5</span><span>10</span>
-            </div>
           </div>
 
           {/* 媒体選択 */}

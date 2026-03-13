@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClinic } from '@/contexts/ClinicContext';
 import { Voicemail, Mic, Square, Upload, Copy, Check, Loader2, ArrowRight, AlertTriangle } from 'lucide-react';
@@ -20,58 +20,125 @@ export default function VoiceInputPage() {
   const [error,        setError]        = useState('');
   const [elapsed,      setElapsed]      = useState(0);
   const [copied,       setCopied]       = useState(false);
-  const [fileUploaded, setFileUploaded] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(true);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef        = useRef<Blob[]>([]);
-  const timerRef         = useRef<ReturnType<typeof setInterval> | null>(null);
-  const fileInputRef     = useRef<HTMLInputElement | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileInputRef   = useRef<HTMLInputElement | null>(null);
+  const interimRef     = useRef('');
 
-  // ─── 録音開始 ─────────────────────────────────────────
+  // ─── Web Speech API 対応チェック ─────────────────────────
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+    }
+  }, []);
+
+  // ─── リアルタイム音声認識（Web Speech API）開始 ──────────
   const startRecording = useCallback(async () => {
     setError('');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      mediaRecorderRef.current = mr;
-      chunksRef.current = [];
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError('お使いのブラウザは音声認識に対応していません。Chrome をお使いください。');
+      return;
+    }
 
-      mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mr.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        sendToWhisper(blob);
+    try {
+      // マイクアクセスの確認
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'ja-JP';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      let finalText = '';
+      interimRef.current = '';
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalText += result[0].transcript;
+          } else {
+            interim += result[0].transcript;
+          }
+        }
+        interimRef.current = interim;
+        setTranscript(finalText + interim);
+        setEditedText(finalText + interim);
       };
 
-      mr.start(200);
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        if (event.error === 'no-speech') return; // 無音は無視
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          setError('マイクへのアクセスが拒否されました。ブラウザの設定をご確認ください。');
+        } else {
+          setError(`音声認識エラー: ${event.error}`);
+        }
+        setState('error');
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
+
+      recognition.onend = () => {
+        // continuous モードで予期せず終了した場合は自動再開
+        if (recognitionRef.current && state === 'recording') {
+          try { recognition.start(); } catch { /* ignore */ }
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+
       setState('recording');
+      setTranscript('');
+      setEditedText('');
       setElapsed(0);
       timerRef.current = setInterval(() => setElapsed(v => v + 1), 1000);
     } catch {
       setError('マイクへのアクセスが拒否されました。ブラウザの設定をご確認ください。');
     }
-  }, []);
+  }, [state]);
 
   // ─── 録音停止 ─────────────────────────────────────────
   const stopRecording = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    if (mediaRecorderRef.current?.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      setState('processing');
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null; // 自動再開を防止
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
-  }, []);
+    if (transcript.trim()) {
+      setState('done');
+    } else {
+      setState('idle');
+      setError('音声が認識されませんでした。もう一度お試しください。');
+    }
+  }, [transcript]);
 
-  // ─── Whisper API へ送信 ───────────────────────────────
-  const sendToWhisper = async (blob: Blob, filename = 'audio.webm') => {
+  // ─── ファイルアップロード（Whisper API）───────────────────
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setState('processing');
     setError('');
+
     try {
       const form = new FormData();
-      form.append('audio', blob, filename);
+      form.append('audio', file, file.name);
 
       const res = await fetch('/api/tools/transcribe', { method: 'POST', body: form });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? '文字起こしに失敗しました'); setState('error'); return; }
+      if (!res.ok) {
+        setError(data.error ?? '文字起こしに失敗しました');
+        setState('error');
+        return;
+      }
 
       setTranscript(data.data.text);
       setEditedText(data.data.text);
@@ -80,14 +147,6 @@ export default function VoiceInputPage() {
       setError('通信エラーが発生しました');
       setState('error');
     }
-  };
-
-  // ─── ファイルアップロード ─────────────────────────────
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setFileUploaded(true);
-    sendToWhisper(file, file.name);
   };
 
   // ─── 患者の声生成ページへ連携 ─────────────────────────
@@ -129,9 +188,10 @@ export default function VoiceInputPage() {
           {state === 'idle' || state === 'error' ? (
             <button
               onClick={startRecording}
+              disabled={!speechSupported}
               className={cn(
                 'w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition hover:scale-105 text-white',
-                color.bg,
+                speechSupported ? color.bg : 'bg-slate-300 cursor-not-allowed',
               )}
             >
               <Mic size={32} />
@@ -152,13 +212,17 @@ export default function VoiceInputPage() {
           {/* State label */}
           <div className="text-center">
             {state === 'idle' && (
-              <p className="text-sm text-slate-500">マイクボタンをタップして録音開始</p>
+              <p className="text-sm text-slate-500">
+                {speechSupported
+                  ? 'マイクボタンをタップして録音開始'
+                  : 'お使いのブラウザは音声認識に対応していません'}
+              </p>
             )}
             {state === 'recording' && (
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-sm font-medium text-red-600">録音中</span>
+                  <span className="text-sm font-medium text-red-600">録音中（リアルタイム認識）</span>
                 </div>
                 <span className="text-lg font-mono text-slate-700">{formatTime(elapsed)}</span>
                 <p className="text-xs text-slate-400">停止ボタンで録音を終了</p>
@@ -172,6 +236,14 @@ export default function VoiceInputPage() {
             )}
           </div>
         </div>
+
+        {/* リアルタイムプレビュー（録音中） */}
+        {state === 'recording' && transcript && (
+          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+            <p className="text-xs text-slate-400 mb-1">認識中のテキスト:</p>
+            <p className="text-sm text-slate-700 leading-relaxed">{transcript}</p>
+          </div>
+        )}
 
         <div className="relative">
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-slate-100" />
@@ -243,12 +315,11 @@ export default function VoiceInputPage() {
 
       {/* ── 使い方ヒント ── */}
       <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 space-y-2">
-        <p className="text-xs font-semibold text-blue-700">💡 使い方のヒント</p>
+        <p className="text-xs font-semibold text-blue-700">使い方のヒント</p>
         <ul className="text-xs text-blue-600 space-y-1 list-disc list-inside">
-          <li>問診・カウンセリング中にマイクをオンにして録音できます</li>
+          <li>マイクボタンで録音するとリアルタイムで文字起こしされます（Chrome推奨）</li>
           <li>事前に録音した音声ファイルをアップロードすることもできます</li>
           <li>文字起こし後は内容を確認・修正してから「コンテンツ生成へ」で患者の声ページへ連携できます</li>
-          <li>OPENAI_API_KEY が設定されていない場合はモックモードで動作します</li>
         </ul>
       </div>
     </div>

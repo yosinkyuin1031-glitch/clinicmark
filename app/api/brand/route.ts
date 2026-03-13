@@ -28,8 +28,8 @@ const DeleteSchema = z.object({
 
 // ─── GET: 院のブランド辞書一覧取得 ─────────────────────
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const clinicId  = req.nextUrl.searchParams.get('clinicId');
   const category  = req.nextUrl.searchParams.get('category') as BrandCategory | null;
@@ -52,8 +52,8 @@ export async function GET(req: NextRequest) {
 
 // ─── POST: 新規エントリ作成 ────────────────────────────
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const body   = await req.json();
   const parsed = CreateSchema.safeParse(body);
@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
 
 // ─── PATCH: 更新 ──────────────────────────────────────
 export async function PATCH(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const body   = await req.json();
   const parsed = UpdateSchema.safeParse(body);
@@ -83,8 +83,8 @@ export async function PATCH(req: NextRequest) {
 
 // ─── DELETE: 論理削除（isActive = false） ─────────────
 export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const body   = await req.json();
   const parsed = DeleteSchema.safeParse(body);

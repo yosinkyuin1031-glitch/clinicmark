@@ -166,17 +166,17 @@ export const CONTENT_STATUS_LABELS: Record<ContentStatus, string> = {
 
 // ContentType ラベル
 export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
-  FAQ:              'FAQ・症状ページ',
+  FAQ:              'FAQ',
   INSTAGRAM_POST:   'Instagram投稿',
   INSTAGRAM_STORY:  'Instagramストーリーズ',
   META_AD:          'Meta広告',
   LP_SECTION:       'LPセクション',
   IMAGE_PROMPT:     '画像生成指示文',
-  HP_CHECK:         'HPチェック',
+  HP_CHECK:         'SNSチェック',
   COMPETITOR_MEMO:  '競合分析メモ',
   MONTHLY_REVIEW:   '月次振り返り',
-  SEMINAR_SCRIPT:   'セミナー原稿',
-  MULTI_CONTENT:    '一括生成',
+  SEMINAR_SCRIPT:   '動画台本',
+  MULTI_CONTENT:    'SNS一括生成',
 };
 
 // ─── AI生成 ────────────────────────────────────────────
@@ -207,56 +207,41 @@ export interface ApiError {
 
 // ─── 一括生成：媒体タイプ ───────────────────────────────
 export const MEDIA_TYPES = [
-  // FAQ系
-  'faq', 'faq_short', 'faq_meta_kw',
-  // ブログ系
-  'blog_summary', 'blog_outline', 'blog_body',
-  'blog_seo_title', 'blog_seo_desc', 'blog_meta_kw',
-  'blog_ogp_title', 'blog_ogp_desc',
-  // SEO/OGP（FAQ用）
-  'seo_title', 'seo_desc', 'ogp_title', 'ogp_desc',
-  // 集客系
-  'gmb', 'instagram', 'meta_ad', 'lp_hero',
+  // SNS系
+  'instagram', 'instagram_story', 'instagram_reel',
+  'threads', 'youtube_short', 'youtube_script',
+  // 広告系
+  'meta_ad', 'meta_ad_video',
+  // LINE系
+  'line_message',
 ] as const;
 
 export type MediaType = typeof MEDIA_TYPES[number];
 
 export const MEDIA_LABELS: Record<MediaType, string> = {
-  faq:            'FAQ',
-  faq_short:      'FAQ簡潔版',
-  faq_meta_kw:    'FAQ用メタキーワード',
-  blog_summary:   'ブログ要約',
-  blog_outline:   'ブログ構成',
-  blog_body:      'ブログ本文',
-  blog_seo_title: 'ブログ用SEOタイトル',
-  blog_seo_desc:  'ブログ用SEOディスクリプション',
-  blog_meta_kw:   'ブログ用メタキーワード',
-  blog_ogp_title: 'ブログ用OGPタイトル',
-  blog_ogp_desc:  'ブログ用OGPディスクリプション',
-  seo_title:      'FAQページSEOタイトル',
-  seo_desc:       'FAQページSEOディスクリプション',
-  ogp_title:      'FAQページOGPタイトル',
-  ogp_desc:       'FAQページOGPディスクリプション',
-  gmb:            'GMB投稿',
-  instagram:      'Instagram投稿',
-  meta_ad:        'Meta広告文',
-  lp_hero:        'LPファーストビュー',
+  instagram:       'Instagram投稿',
+  instagram_story: 'Instagramストーリーズ',
+  instagram_reel:  'Instagramリール',
+  threads:         'Threads投稿',
+  youtube_short:   'YouTubeショート台本',
+  youtube_script:  'YouTube動画台本',
+  meta_ad:         'Meta広告文',
+  meta_ad_video:   'Meta動画広告',
+  line_message:    'LINEメッセージ',
 };
 
 // 短い媒体（半幅表示）
 export const MEDIA_HALF_WIDTH: ReadonlySet<MediaType> = new Set<MediaType>([
-  'faq_meta_kw',
-  'seo_title', 'seo_desc', 'ogp_title', 'ogp_desc',
-  'blog_seo_title', 'blog_seo_desc', 'blog_meta_kw',
-  'blog_ogp_title', 'blog_ogp_desc',
+  'threads', 'line_message',
 ]);
 
 // 媒体グループ（UI 表示用）
 export const MEDIA_GROUPS = [
-  { label: 'FAQ', types: ['faq', 'faq_short', 'faq_meta_kw'] as MediaType[] },
-  { label: 'ブログ', types: ['blog_summary', 'blog_outline', 'blog_body', 'blog_seo_title', 'blog_seo_desc', 'blog_meta_kw', 'blog_ogp_title', 'blog_ogp_desc'] as MediaType[] },
-  { label: 'SEO/OGP（FAQ用）', types: ['seo_title', 'seo_desc', 'ogp_title', 'ogp_desc'] as MediaType[] },
-  { label: '集客', types: ['gmb', 'instagram', 'meta_ad', 'lp_hero'] as MediaType[] },
+  { label: 'Instagram', types: ['instagram', 'instagram_story', 'instagram_reel'] as MediaType[] },
+  { label: 'YouTube', types: ['youtube_short', 'youtube_script'] as MediaType[] },
+  { label: 'SNS', types: ['threads'] as MediaType[] },
+  { label: '広告', types: ['meta_ad', 'meta_ad_video'] as MediaType[] },
+  { label: 'LINE', types: ['line_message'] as MediaType[] },
 ] as const;
 
 // ─── 一括生成：入力 ─────────────────────────────────────
@@ -382,7 +367,7 @@ export const AD_TYPE_LABELS: Record<AdType, string> = {
 };
 
 // ─── 画像指示文生成 ─────────────────────────────────────
-export type ImageUseCase  = 'blog' | 'gmb' | 'instagram' | 'ad';
+export type ImageUseCase  = 'instagram' | 'youtube' | 'threads' | 'ad';
 export type ImageStyle    = 'illustration' | 'photo';
 export type AspectRatio   = '16:9' | '1:1' | '4:5' | '9:16';
 
@@ -414,9 +399,9 @@ export interface ImagePromptResult {
 }
 
 export const IMAGE_USE_CASE_LABELS: Record<ImageUseCase, string> = {
-  blog:      'ブログ・記事',
-  gmb:       'Googleビジネス',
   instagram: 'Instagram',
+  youtube:   'YouTube',
+  threads:   'Threads',
   ad:        '広告バナー',
 };
 
@@ -468,15 +453,15 @@ export const COMPARE_TYPE_LABELS: Record<CompareType, string> = {
 };
 
 // ─── コンテンツ管理マップ ────────────────────────────────
-export type MapContentType = 'blog' | 'video' | 'gmb' | 'instagram' | 'faq';
+export type MapContentType = 'instagram' | 'youtube' | 'threads' | 'line' | 'meta_ad';
 export type MapStatus      = 'planned' | 'creating' | 'published';
 
 export const MAP_CONTENT_TYPE_LABELS: Record<MapContentType, string> = {
-  blog:      'ブログ',
-  video:     '動画',
-  gmb:       'GMB投稿',
   instagram: 'Instagram',
-  faq:       'FAQ',
+  youtube:   'YouTube',
+  threads:   'Threads',
+  line:      'LINE',
+  meta_ad:   'Meta広告',
 };
 
 export const MAP_STATUS_LABELS: Record<MapStatus, string> = {
@@ -491,7 +476,7 @@ export const MAP_STATUS_COLORS: Record<MapStatus, string> = {
   published: 'bg-green-100 text-green-700',
 };
 
-export const MAP_CONTENT_TYPES: MapContentType[] = ['blog', 'video', 'gmb', 'instagram', 'faq'];
+export const MAP_CONTENT_TYPES: MapContentType[] = ['instagram', 'youtube', 'threads', 'line', 'meta_ad'];
 
 export interface ContentMapItem {
   id:          string;
@@ -726,28 +711,28 @@ export interface GeneratedStep {
 
 // ─── Phase 10: 患者の声 → コンテンツ生成 ──────────────────
 export const PATIENT_VOICE_MEDIA_TYPES = [
-  'pv_faq',
-  'pv_blog_intro',
+  'pv_instagram',
+  'pv_instagram_story',
+  'pv_youtube_short',
   'pv_meta_ad',
   'pv_line_message',
-  'pv_instagram',
-  'pv_gmb',
+  'pv_threads',
 ] as const;
 
 export type PatientVoiceMediaType = typeof PATIENT_VOICE_MEDIA_TYPES[number];
 
 export const PATIENT_VOICE_MEDIA_LABELS: Record<PatientVoiceMediaType, string> = {
-  pv_faq:          'FAQ（患者の声版）',
-  pv_blog_intro:   'ブログ書き出し',
-  pv_meta_ad:      'Meta広告文',
-  pv_line_message: 'LINEフォローメッセージ',
-  pv_instagram:    'Instagram投稿',
-  pv_gmb:          'GMB投稿',
+  pv_instagram:       'Instagram投稿',
+  pv_instagram_story: 'Instagramストーリーズ',
+  pv_youtube_short:   'YouTubeショート台本',
+  pv_meta_ad:         'Meta広告文',
+  pv_line_message:    'LINEフォローメッセージ',
+  pv_threads:         'Threads投稿',
 };
 
 export const PATIENT_VOICE_MEDIA_HALF_WIDTH: ReadonlySet<PatientVoiceMediaType> = new Set<PatientVoiceMediaType>([
   'pv_line_message',
-  'pv_gmb',
+  'pv_threads',
 ]);
 
 export interface PatientVoiceInput {

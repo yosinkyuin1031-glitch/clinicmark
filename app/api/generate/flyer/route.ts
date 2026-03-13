@@ -7,8 +7,8 @@ import type { FlyerGenInput } from '@/types';
 
 // ─── POST: チラシコピー AI 生成 ───────────────────────
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const body = await req.json() as FlyerGenInput;
   if (!body.clinicId || !body.theme) {
