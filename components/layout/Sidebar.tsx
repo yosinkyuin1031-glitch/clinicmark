@@ -28,6 +28,7 @@ import {
   Voicemail,
   UserRound,
   Wand2,
+  AtSign,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useClinic } from '@/contexts/ClinicContext';
@@ -55,6 +56,7 @@ const NAV_ITEMS = [
   { href: '/line/steps',             label: 'ステップ配信',          icon: GitBranch,       group: 'LINE・集客' },
   { href: '/line/personal',          label: '患者別カスタマイズLINE', icon: UserRound,       group: 'LINE・集客' },
   { href: '/flyers',                 label: 'チラシ管理',            icon: FileImage,       group: 'LINE・集客' },
+  { href: '/threads',                label: 'Threads自動投稿',       icon: AtSign,          group: 'SNS連携' },
   { href: '/library',                label: 'コンテンツライブラリ',  icon: Archive,         group: '管理' },
   { href: '/content-map',            label: 'コンテンツ管理マップ',  icon: Map,             group: '管理' },
   { href: '/settings',               label: '設定',                  icon: Settings,        group: null },

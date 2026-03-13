@@ -30,6 +30,8 @@ model Clinic {
   lineTemplates     LineTemplate[]
   lineScenarios     LineScenario[]
   patients          Patient[]
+  socialConnections SocialConnection[]
+  scheduledPosts    ScheduledPost[]
 
   @@map("clinics")
 }
@@ -333,4 +335,49 @@ model ContentMap {
 
   @@index([clinicId, contentType, status])
   @@map("content_maps")
+}
+
+// ═══════════════════════════════════════════════════════
+// SNS連携（Threads OAuth）
+// ═══════════════════════════════════════════════════════
+model SocialConnection {
+  id           String   @id @default(cuid())
+  clinicId     String
+  platform     String   @default("threads") // threads
+  accessToken  String
+  userId       String   // Threads user ID
+  username     String   @default("")
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, platform])
+  @@map("social_connections")
+}
+
+// ═══════════════════════════════════════════════════════
+// 予約投稿キュー
+// status: PENDING | PROCESSING | PUBLISHED | FAILED | CANCELLED
+// ═══════════════════════════════════════════════════════
+model ScheduledPost {
+  id          String    @id @default(cuid())
+  clinicId    String
+  platform    String    @default("threads")
+  text        String
+  imageUrl    String    @default("")
+  status      String    @default("PENDING")
+  scheduledAt DateTime
+  publishedAt DateTime?
+  errorLog    String    @default("")
+  contentId   String?   // 生成コンテンツとの紐付け（任意）
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
+  @@index([clinicId])
+  @@map("scheduled_posts")
 }
