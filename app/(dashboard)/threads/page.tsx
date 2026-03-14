@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AtSign, Send, Clock, CheckCircle2, XCircle, Trash2, Link2, Unlink } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
@@ -23,6 +23,14 @@ interface ScheduledPost {
 }
 
 export default function ThreadsPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-500">読み込み中...</div>}>
+      <ThreadsPageContent />
+    </Suspense>
+  );
+}
+
+function ThreadsPageContent() {
   const { currentClinic } = useClinic();
   const color = currentClinic ? getClinicColor(currentClinic.slug) : getClinicColor('');
   const searchParams = useSearchParams();

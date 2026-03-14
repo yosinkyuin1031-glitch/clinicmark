@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useClinic } from '@/contexts/ClinicContext';
 import {
@@ -108,6 +108,14 @@ function OutputCard({ item }: { item: PatientVoiceOutputItem }) {
 
 // ─── Main Page ────────────────────────────────────────────
 export default function PatientVoicePage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-500">読み込み中...</div>}>
+      <PatientVoicePageContent />
+    </Suspense>
+  );
+}
+
+function PatientVoicePageContent() {
   const { currentClinic } = useClinic();
   const color = currentClinic ? getClinicColor(currentClinic.slug) : getClinicColor('');
   const searchParams = useSearchParams();
