@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   BookOpen, Instagram, Archive,
   Sparkles, TrendingUp, Clock, Megaphone, LayoutGrid, Video, AtSign,
+  Youtube, CalendarDays, Image, Send,
 } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { useSession } from 'next-auth/react';
@@ -16,6 +17,10 @@ const QUICK_ACTIONS = [
   { href: '/generate/instagram', label: 'Instagram台本',      icon: Instagram,       desc: 'フィード・ストーリーズ台本' },
   { href: '/generate/video-ad',  label: '動画クリエイティブ',  icon: Video,           desc: 'Instagram・YouTube動画台本' },
   { href: '/generate/meta-ad',   label: 'Meta広告コピー',     icon: Megaphone,       desc: 'Facebook/Instagram 広告3案' },
+  { href: '/generate/youtube',   label: 'YouTube台本',        icon: Youtube,         desc: 'YouTube動画の台本を自動生成' },
+  { href: '/generate/image',     label: 'AI画像生成',          icon: Image,           desc: 'SNS投稿用の画像プロンプト' },
+  { href: '/calendar',           label: '投稿カレンダー',      icon: CalendarDays,    desc: 'SNS投稿スケジュール管理' },
+  { href: '/sns-hub',            label: 'SNS投稿ハブ',         icon: Send,            desc: '全SNSの投稿を一元管理' },
   { href: '/threads',            label: 'Threads自動投稿',    icon: AtSign,          desc: 'Threadsへの自動投稿管理' },
   { href: '/brand',              label: 'ブランド辞書',        icon: BookOpen,        desc: '院のブランド情報を管理' },
   { href: '/library',            label: 'コンテンツライブラリ', icon: Archive,        desc: '過去の生成物を確認' },

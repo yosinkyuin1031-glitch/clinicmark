@@ -26,6 +26,10 @@ import {
   UserRound,
   Wand2,
   AtSign,
+  Youtube,
+  CalendarDays,
+  Send,
+  Image,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useClinic } from '@/contexts/ClinicContext';
@@ -42,6 +46,8 @@ const NAV_ITEMS = [
   { href: '/generate/image-prompt',   label: '画像指示文',            icon: ImagePlay,       group: 'SNSコンテンツ生成' },
   { href: '/generate/patient-voice',  label: '患者の声から生成',      icon: Mic2,            group: 'SNSコンテンツ生成' },
   { href: '/generate/video-ad',       label: '動画広告クリエイティブ', icon: Video,           group: 'SNSコンテンツ生成' },
+  { href: '/generate/youtube',       label: 'YouTube台本生成',       icon: Youtube,         group: 'SNSコンテンツ生成' },
+  { href: '/generate/image',         label: 'AI画像生成',            icon: Image,           group: 'SNSコンテンツ生成' },
   { href: '/tools/competitor',        label: '競合分析',              icon: SearchCheck,     group: 'ツール' },
   { href: '/tools/review',            label: '口コミ収集QR',          icon: Star,            group: 'ツール' },
   { href: '/tools/voice-input',       label: '音声文字起こし',        icon: Voicemail,       group: 'ツール' },
@@ -50,6 +56,8 @@ const NAV_ITEMS = [
   { href: '/line/steps',             label: 'ステップ配信',          icon: GitBranch,       group: 'LINE・集客' },
   { href: '/line/personal',          label: '患者別カスタマイズLINE', icon: UserRound,       group: 'LINE・集客' },
   { href: '/flyers',                 label: 'チラシ管理',            icon: FileImage,       group: 'LINE・集客' },
+  { href: '/calendar',               label: '投稿カレンダー',        icon: CalendarDays,    group: 'SNS連携' },
+  { href: '/sns-hub',                label: 'SNS投稿ハブ',           icon: Send,            group: 'SNS連携' },
   { href: '/threads',                label: 'Threads自動投稿',       icon: AtSign,          group: 'SNS連携' },
   { href: '/library',                label: 'コンテンツライブラリ',  icon: Archive,         group: '管理' },
   { href: '/content-map',            label: 'コンテンツ管理マップ',  icon: Map,             group: '管理' },
