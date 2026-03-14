@@ -47,6 +47,7 @@ export default function MultiGeneratePage() {
   const [outputs,  setOutputs]  = useState<OutputItem[] | null>(null);
   const [error,    setError]    = useState<string | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
+  const [progress, setProgress] = useState<{ current: number; total: number; label: string }>({ current: 0, total: 0, label: '' });
 
   // 媒体トグル
   const toggleMedia = (m: MediaType) => {
@@ -59,48 +60,98 @@ export default function MultiGeneratePage() {
   const selectAll   = () => setSelectedMedia([...MEDIA_TYPES]);
   const deselectAll = () => setSelectedMedia([]);
 
-  // 生成実行
+  // 生成実行（1媒体ずつ順番に呼び出し → タイムアウト回避）
   const handleGenerate = async () => {
     if (!currentClinic || selectedMedia.length === 0 || !theme.trim()) return;
 
     setLoading(true);
     setError(null);
     setOutputs(null);
+    setDuration(null);
 
-    try {
-      const body: MultiGenInput = {
-        clinicId:         currentClinic.id,
-        theme:            theme.trim(),
-        symptom:          symptom.trim(),
-        target:           target.trim(),
-        areaName:         areaName.trim(),
-        faqCount,
-        mediaTypes:       selectedMedia,
-        charCount,
-        writingStyle,
-        requiredKeywords: requiredKeywords.trim(),
-        avoidExpressions: avoidExpressions.trim(),
-      };
+    const startTime = Date.now();
+    const results: OutputItem[] = [];
+    const total = selectedMedia.length;
 
-      const res = await fetch('/api/generate/multi', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
-      });
+    for (let i = 0; i < total; i++) {
+      const mediaType = selectedMedia[i];
+      const label = MEDIA_LABELS[mediaType] ?? mediaType;
+      setProgress({ current: i + 1, total, label });
 
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error ?? '生成に失敗しました');
+      try {
+        const res = await fetch('/api/generate/single', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            clinicId:         currentClinic.id,
+            theme:            theme.trim(),
+            symptom:          symptom.trim(),
+            target:           target.trim(),
+            areaName:         areaName.trim(),
+            faqCount,
+            mediaType,
+            charCount,
+            writingStyle,
+            requiredKeywords: requiredKeywords.trim(),
+            avoidExpressions: avoidExpressions.trim(),
+          }),
+        });
+
+        if (!res.ok) {
+          let errMsg = '生成に失敗しました';
+          try {
+            const json = await res.json();
+            errMsg = json.error ?? errMsg;
+          } catch {
+            // JSON parse failure (timeout etc.)
+          }
+          results.push({
+            mediaType,
+            label,
+            content: `[エラー] ${errMsg}`,
+            charCount: 0,
+            warnings: [errMsg],
+          });
+          continue;
+        }
+
+        let data: OutputItem;
+        try {
+          data = await res.json();
+        } catch {
+          results.push({
+            mediaType,
+            label,
+            content: '[エラー] レスポンスの解析に失敗しました',
+            charCount: 0,
+            warnings: ['レスポンス解析エラー'],
+          });
+          continue;
+        }
+
+        results.push({
+          mediaType: data.mediaType,
+          label:     data.label,
+          content:   data.content,
+          charCount: data.charCount,
+          warnings:  data.warnings,
+          contentId: data.contentId,
+        });
+      } catch (e) {
+        results.push({
+          mediaType,
+          label,
+          content: `[エラー] ${e instanceof Error ? e.message : '通信エラー'}`,
+          charCount: 0,
+          warnings: [e instanceof Error ? e.message : '通信エラー'],
+        });
       }
-
-      const data = await res.json();
-      setOutputs(data.outputs);
-      setDuration(data.durationMs);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '生成中にエラーが発生しました');
-    } finally {
-      setLoading(false);
     }
+
+    setOutputs(results);
+    setDuration(Date.now() - startTime);
+    setLoading(false);
+    setProgress({ current: 0, total: 0, label: '' });
   };
 
   const canGenerate = !loading && !!currentClinic && selectedMedia.length > 0 && !!theme.trim();
@@ -316,8 +367,20 @@ export default function MultiGeneratePage() {
         {loading && (
           <div className="flex flex-col items-center justify-center py-24 text-slate-400">
             <Loader2 size={36} className="animate-spin mb-4" />
-            <p className="text-sm font-medium">{selectedMedia.length}種類のコンテンツを生成中...</p>
-            <p className="text-xs mt-1">ブランド辞書を参照しています</p>
+            <p className="text-sm font-medium">
+              {progress.total > 0
+                ? `${progress.current} / ${progress.total} 生成中: ${progress.label}`
+                : '準備中...'}
+            </p>
+            {progress.total > 0 && (
+              <div className="w-48 bg-slate-200 rounded-full h-2 mt-3">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                />
+              </div>
+            )}
+            <p className="text-xs mt-2">ブランド辞書を参照しています</p>
           </div>
         )}
 

@@ -390,6 +390,26 @@ async function generateForMedia(
   }
 }
 
+// ─── 単一媒体を生成 ──────────────────────────────────────
+export async function generateSingle(
+  input:        MultiGenInput,
+  brandContext: string,
+  clinicName:   string,
+  goodExamples: Partial<Record<string, string[]>> | undefined,
+  mediaType:    MediaType,
+): Promise<OutputItem> {
+  const ctx: GenerationContext = { clinicName, brandContext, input, goodExamples };
+  const content  = await generateForMedia(mediaType, ctx);
+  const warnings = checkQuality(content, input);
+  return {
+    mediaType,
+    label:     MEDIA_LABELS[mediaType],
+    content,
+    charCount: content.length,
+    warnings,
+  };
+}
+
 // ─── 全媒体を並列生成 ─────────────────────────────────────
 export async function generateAll(
   input:        MultiGenInput,
