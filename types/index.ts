@@ -842,6 +842,7 @@ export interface NoteGenInput {
   target:       string;
   writingStyle: 'friendly' | 'formal' | 'casual';
   charTarget:   number;
+  cta?:         string;
 }
 
 export interface NoteGenResult {
