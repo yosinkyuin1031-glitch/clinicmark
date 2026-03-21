@@ -824,6 +824,64 @@ export interface TranscribeResult {
   durationMs:   number;
 }
 
+// ─── Note（記事）生成 ───────────────────────────────────
+export type NoteType = 'story' | 'knowledge' | 'column';
+
+export const NOTE_TYPES: NoteType[] = ['story', 'knowledge', 'column'];
+
+export const NOTE_TYPE_LABELS: Record<NoteType, string> = {
+  story:     'ストーリー',
+  knowledge: 'お役立ち解説',
+  column:    '院長コラム',
+};
+
+export interface NoteGenInput {
+  clinicId:     string;
+  theme:        string;
+  noteType:     NoteType;
+  target:       string;
+  writingStyle: 'friendly' | 'formal' | 'casual';
+  charTarget:   number;
+}
+
+export interface NoteGenResult {
+  contentId:    string;
+  titleOptions: string[];
+  body:         string;
+  charCount:    number;
+  durationMs:   number;
+}
+
+// ─── 予約投稿ステータス ─────────────────────────────────
+export type ScheduledPostStatus = 'PENDING' | 'PUBLISHED' | 'FAILED' | 'CANCELLED';
+
+export const SCHEDULED_POST_STATUS_LABELS: Record<ScheduledPostStatus, string> = {
+  PENDING:   '予約中',
+  PUBLISHED: '投稿済み',
+  FAILED:    '失敗',
+  CANCELLED: 'キャンセル',
+};
+
+export const SCHEDULED_POST_STATUS_COLORS: Record<ScheduledPostStatus, string> = {
+  PENDING:   'bg-amber-100 text-amber-700',
+  PUBLISHED: 'bg-green-100 text-green-700',
+  FAILED:    'bg-red-100 text-red-700',
+  CANCELLED: 'bg-slate-100 text-slate-500',
+};
+
+export interface ScheduledPost {
+  id:           string;
+  contentId:    string;
+  clinicId:     string;
+  platform:     string;
+  scheduledAt:  string;
+  status:       ScheduledPostStatus;
+  publishedAt:  string | null;
+  errorMessage: string | null;
+  createdAt:    string;
+  updatedAt:    string;
+}
+
 // ─── Phase 14: 患者別カスタマイズLINE ────────────────────
 export interface Patient {
   id:          string;
