@@ -41,7 +41,7 @@ const FALLBACK_MODELS: ModelOption[] = [
   {
     value: 'gemini', label: 'Nano Banana Pro', badge: 'Gemini',
     desc: '日本語テキスト描画が得意・最新Geminiモデル', envKey: 'GEMINI_API_KEY',
-    apiModel: 'gemini-2.0-flash-preview-image-generation', available: true, supportsEdit: true,
+    apiModel: 'gemini-2.5-flash-image', available: true, supportsEdit: true,
   },
 ];
 
@@ -96,7 +96,7 @@ export default function ImageRemixPage() {
   const [aiPreviewUrl,   setAiPreviewUrl]   = useState<string | null>(null);
   const [aiInstructions, setAiInstructions] = useState('');
   const [aiSize,         setAiSize]         = useState('1024x1024');
-  const [aiModel,        setAiModel]        = useState<AiModel>('openai');
+  const [aiModel,        setAiModel]        = useState<AiModel>('gemini');
   const [aiLoading,      setAiLoading]      = useState(false);
   const [aiResult,       setAiResult]       = useState<AiResult | null>(null);
   const [aiError,        setAiError]        = useState('');

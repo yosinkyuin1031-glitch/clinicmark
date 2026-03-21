@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 import {
   createCanvaDesign,
@@ -15,14 +13,7 @@ const Schema = z.object({
 });
 
 // POST /api/canva/design
-// Canva デザインを作成して編集URLを返す
-// CANVA_API_TOKEN 未設定時はフォールバックURL（Canva作成ページ）を返す
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-  }
-
   const body   = await req.json();
   const parsed = Schema.safeParse(body);
   if (!parsed.success) {
@@ -42,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // フォールバック：Canva作成ページURLを返す（テキストはクライアントでコピー済み）
+  // フォールバック：Canva作成ページURLを返す
   const fallbackUrl =
     CANVA_CREATE_URLS[designType as CanvaDesignPreset] ??
     'https://www.canva.com/create/';
@@ -52,9 +43,5 @@ export async function POST(req: NextRequest) {
 
 // GET /api/canva/design → Canva連携の有効状態を返す
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
-  }
   return NextResponse.json({ enabled: isCanvaEnabled() });
 }

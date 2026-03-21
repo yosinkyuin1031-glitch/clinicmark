@@ -20,7 +20,7 @@
       "badge": "Gemini",
       "desc": "日本語テキスト描画が得意・最新Geminiモデル",
       "envKey": "GEMINI_API_KEY",
-      "apiModel": "gemini-2.0-flash-preview-image-generation",
+      "apiModel": "gemini-2.5-flash-image",
       "available": true,
       "supportsEdit": true
     }

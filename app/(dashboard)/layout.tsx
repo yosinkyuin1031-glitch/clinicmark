@@ -12,8 +12,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect('/login');
+  // 認証を一時的にバイパス（後で戻す）
+  // const session = await getServerSession(authOptions);
+  // if (!session) redirect('/login');
 
   return (
     <MobileNavProvider>

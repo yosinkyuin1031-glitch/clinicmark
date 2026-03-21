@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useClinic } from '@/contexts/ClinicContext';
 import {
@@ -17,16 +17,16 @@ import { RatingButtons } from '@/components/library/RatingButtons';
 import { CanvaButton } from '@/components/ui/CanvaButton';
 
 const PV_CANVA_MAP: Partial<Record<string, string>> = {
-  pv_meta_ad:   'facebook_post',
-  pv_instagram: 'instagram_post',
-  pv_gmb:       'poster',
+  pv_meta_ad:         'facebook_post',
+  pv_instagram:       'instagram_post',
+  pv_instagram_story: 'instagram_story',
 };
 
 // ─── 媒体グループ ─────────────────────────────────────────
 const MEDIA_GROUPS_PV = [
-  { label: 'ロングコンテンツ', types: ['pv_faq', 'pv_blog_intro'] as PatientVoiceMediaType[] },
-  { label: '広告・SNS',        types: ['pv_meta_ad', 'pv_instagram'] as PatientVoiceMediaType[] },
-  { label: 'LINE・GMB',       types: ['pv_line_message', 'pv_gmb'] as PatientVoiceMediaType[] },
+  { label: 'Instagram',    types: ['pv_instagram', 'pv_instagram_story'] as PatientVoiceMediaType[] },
+  { label: '動画・広告',    types: ['pv_youtube_short', 'pv_meta_ad'] as PatientVoiceMediaType[] },
+  { label: 'LINE・Threads', types: ['pv_line_message', 'pv_threads'] as PatientVoiceMediaType[] },
 ];
 
 // ─── OutputCard ───────────────────────────────────────────
@@ -108,6 +108,14 @@ function OutputCard({ item }: { item: PatientVoiceOutputItem }) {
 
 // ─── Main Page ────────────────────────────────────────────
 export default function PatientVoicePage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-500">読み込み中...</div>}>
+      <PatientVoicePageContent />
+    </Suspense>
+  );
+}
+
+function PatientVoicePageContent() {
   const { currentClinic } = useClinic();
   const color = currentClinic ? getClinicColor(currentClinic.slug) : getClinicColor('');
   const searchParams = useSearchParams();

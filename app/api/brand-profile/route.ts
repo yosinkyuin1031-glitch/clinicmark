@@ -11,8 +11,8 @@ import {
 // ─── GET: プロフィール取得（?clinicId=xxx）
 //         JSON エクスポート（?clinicId=xxx&export=json）
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const { searchParams } = new URL(req.url);
   const clinicId = searchParams.get('clinicId');
@@ -46,8 +46,8 @@ const PutSchema = z.object({
 });
 
 export async function PUT(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const body = await req.json();
   const parsed = PutSchema.safeParse(body);

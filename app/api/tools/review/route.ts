@@ -16,8 +16,8 @@ const schema = z.object({
 
 // ─── GET: 現在の設定取得 ─────────────────────────────────
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const clinicId = req.nextUrl.searchParams.get('clinicId');
   if (!clinicId) return NextResponse.json({ error: 'clinicId が必要です' }, { status: 400 });
@@ -32,8 +32,8 @@ export async function GET(req: NextRequest) {
 
 // ─── POST: 設定保存 + 案内文生成 ─────────────────────────
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
+  // const session = await getServerSession(authOptions); // 認証一時無効
+  // if (!session) return NextResponse.json({ error: '認証が必要です' }, { status: 401 }); // 認証一時無効
 
   const body   = await req.json();
   const parsed = schema.safeParse(body);

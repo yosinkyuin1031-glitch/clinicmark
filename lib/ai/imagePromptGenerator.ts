@@ -3,9 +3,9 @@ import type { ImagePromptInput, ImagePromptOutput } from '@/types';
 
 // ─── ユースケース別プラットフォーム説明 ────────────────
 const USE_CASE_DESC: Record<ImagePromptInput['useCase'], string> = {
-  blog:      'ブログ・記事のアイキャッチ画像',
-  gmb:       'Googleビジネスプロフィール投稿用',
   instagram: 'Instagram フィード投稿用（正方形〜縦型）',
+  youtube:   'YouTube サムネイル・ショート用',
+  threads:   'Threads 投稿用',
   ad:        '広告バナー・SNS広告用',
 };
 

@@ -11,7 +11,7 @@ import {
 } from '@/types';
 
 // ─── 定数 ────────────────────────────────────────────────
-const USE_CASES: ImageUseCase[] = ['blog', 'gmb', 'instagram', 'ad'];
+const USE_CASES: ImageUseCase[] = ['instagram', 'youtube', 'threads', 'ad'];
 const STYLES: ImageStyle[]      = ['photo', 'illustration'];
 const RATIOS: AspectRatio[]     = ['16:9', '1:1', '4:5', '9:16'];
 
