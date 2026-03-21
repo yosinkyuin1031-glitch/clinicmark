@@ -847,8 +847,10 @@ export interface NoteGenInput {
 
 export interface NoteGenResult {
   contentId:    string;
-  titleOptions: string[];
+  titles:       string[];
   body:         string;
+  hashtags:     string[];
+  seoMemo?:     string;
   charCount:    number;
   durationMs:   number;
 }
