@@ -9,6 +9,9 @@ import {
   type LineTemplate, type LineCategory, type LineQuickReply,
 } from '@/types';
 import { getClinicColor, cn } from '@/lib/utils/clinic';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/hooks/useToast';
 
 type PanelMode = 'create' | 'edit' | null;
 
@@ -24,6 +27,8 @@ export default function LineTemplatesPage() {
   const [editTarget,     setEditTarget]     = useState<LineTemplate | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<LineCategory | ''>('');
   const [generating,     setGenerating]     = useState(false);
+  const [deleteTarget,   setDeleteTarget]   = useState<string | null>(null);
+  const { toasts, removeToast, success, error: showError } = useToast();
 
   // フォーム状態
   const [formTitle,        setFormTitle]        = useState('');
@@ -72,8 +77,10 @@ export default function LineTemplatesPage() {
         body: JSON.stringify({ clinicId: currentClinic.id, category: formCategory, context: formContext, tone: formTone }),
       });
       const json = await res.json();
-      if (json.data?.message) setFormMessage(json.data.message);
-    } finally { setGenerating(false); }
+      if (!res.ok) { showError(json.error ?? '生成に失敗しました'); return; }
+      if (json.data?.message) { setFormMessage(json.data.message); success('メッセージを生成しました'); }
+    } catch { showError('ネットワークエラーが発生しました'); }
+    finally { setGenerating(false); }
   }
 
   async function handleRegenerate(t: LineTemplate) {
@@ -87,25 +94,32 @@ export default function LineTemplatesPage() {
       clinicId: currentClinic.id, title: formTitle, category: formCategory,
       message: formMessage, quickReplies: formQuickReplies,
     };
-    if (editTarget) {
-      await fetch(`/api/line/templates/${editTarget.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    try {
+      const url    = editTarget ? `/api/line/templates/${editTarget.id}` : '/api/line/templates';
+      const method = editTarget ? 'PATCH' : 'POST';
+      const res    = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-    } else {
-      await fetch('/api/line/templates', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    }
-    await fetchTemplates();
-    closePanel();
+      if (!res.ok) { const j = await res.json(); showError(j.error ?? '保存に失敗しました'); return; }
+      success(editTarget ? '更新しました' : '保存しました');
+      await fetchTemplates();
+      closePanel();
+    } catch { showError('ネットワークエラーが発生しました'); }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('このテンプレートを削除しますか？')) return;
-    await fetch(`/api/line/templates/${id}`, { method: 'DELETE' });
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
+    setDeleteTarget(id);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await fetch(`/api/line/templates/${deleteTarget}`, { method: 'DELETE' });
+      setTemplates((prev) => prev.filter((t) => t.id !== deleteTarget));
+      success('削除しました');
+    } catch { showError('削除に失敗しました'); }
+    finally { setDeleteTarget(null); }
   }
 
   function addQR()        { setFormQuickReplies((prev) => [...prev, { ...EMPTY_QR }]); }
@@ -119,6 +133,7 @@ export default function LineTemplatesPage() {
   }
 
   return (
+    <>
     <div className="max-w-5xl mx-auto">
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
@@ -276,5 +291,16 @@ export default function LineTemplatesPage() {
         </div>
       )}
     </div>
+
+    <ConfirmDialog
+      open={!!deleteTarget}
+      title="テンプレートを削除しますか？"
+      description="この操作は元に戻せません。"
+      confirmLabel="削除する"
+      onConfirm={confirmDelete}
+      onCancel={() => setDeleteTarget(null)}
+    />
+    <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </>
   );
 }

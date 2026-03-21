@@ -12,6 +12,9 @@ import {
   type LineScenario, type LineStep, type ScenarioType,
 } from '@/types';
 import { getClinicColor, cn } from '@/lib/utils/clinic';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/hooks/useToast';
 
 type PanelMode = 'create' | 'edit' | null;
 
@@ -23,8 +26,11 @@ export default function LineStepsPage() {
   const [loading,      setLoading]      = useState(false);
   const [selected,     setSelected]     = useState<LineScenario | null>(null);
   const [panelMode,    setPanelMode]    = useState<PanelMode>(null);
-  const [typeFilter,   setTypeFilter]   = useState<ScenarioType | ''>('');
-  const [generating,   setGenerating]   = useState(false);
+  const [typeFilter,      setTypeFilter]      = useState<ScenarioType | ''>('');
+  const [generating,      setGenerating]      = useState(false);
+  const [deleteScenario,  setDeleteScenario]  = useState<string | null>(null);
+  const [deleteStep,      setDeleteStep]      = useState<string | null>(null);
+  const { toasts, removeToast, success, error: showError } = useToast();
 
   // 新規作成フォーム状態
   const [formTitle,        setFormTitle]        = useState('');
@@ -140,10 +146,18 @@ export default function LineStepsPage() {
 
   // ─── シナリオ削除・トグル ──────────────────────────────
   async function handleDelete(id: string) {
-    if (!confirm('このシナリオを削除しますか？（ステップもすべて削除されます）')) return;
-    await fetch(`/api/line/scenarios/${id}`, { method: 'DELETE' });
-    setScenarios((prev) => prev.filter((s) => s.id !== id));
-    if (selected?.id === id) setSelected(null);
+    setDeleteScenario(id);
+  }
+
+  async function confirmDeleteScenario() {
+    if (!deleteScenario) return;
+    try {
+      await fetch(`/api/line/scenarios/${deleteScenario}`, { method: 'DELETE' });
+      setScenarios((prev) => prev.filter((s) => s.id !== deleteScenario));
+      if (selected?.id === deleteScenario) setSelected(null);
+      success('シナリオを削除しました');
+    } catch { showError('削除に失敗しました'); }
+    finally { setDeleteScenario(null); }
   }
 
   async function handleToggle(id: string, isActive: boolean) {
@@ -177,9 +191,19 @@ export default function LineStepsPage() {
   }
 
   async function handleDeleteStep(id: string) {
-    if (!confirm('このステップを削除しますか？')) return;
-    await fetch(`/api/line/steps/${id}`, { method: 'DELETE' });
-    await refreshSelected();
+    setDeleteStep(id);
+  }
+
+  async function confirmDeleteStep() {
+    if (!deleteStep) return;
+    try {
+      await fetch(`/api/line/steps/${deleteStep}`, { method: 'DELETE' });
+      success('ステップを削除しました');
+    } catch { showError('削除に失敗しました'); }
+    finally {
+      setDeleteStep(null);
+      await refreshSelected();
+    }
   }
 
   async function refreshSelected() {
@@ -195,6 +219,7 @@ export default function LineStepsPage() {
   }
 
   return (
+    <>
     <div className="max-w-6xl mx-auto">
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
@@ -455,5 +480,27 @@ export default function LineStepsPage() {
         </div>
       )}
     </div>
+
+    {/* シナリオ削除確認 */}
+    <ConfirmDialog
+      open={!!deleteScenario}
+      title="シナリオを削除しますか？"
+      description="すべてのステップも削除されます。この操作は元に戻せません。"
+      confirmLabel="削除する"
+      onConfirm={confirmDeleteScenario}
+      onCancel={() => setDeleteScenario(null)}
+    />
+
+    {/* ステップ削除確認 */}
+    <ConfirmDialog
+      open={!!deleteStep}
+      title="ステップを削除しますか？"
+      description="この操作は元に戻せません。"
+      confirmLabel="削除する"
+      onConfirm={confirmDeleteStep}
+      onCancel={() => setDeleteStep(null)}
+    />
+    <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </>
   );
 }

@@ -10,7 +10,8 @@ import {
   type ContentType,
 } from '@/types';
 import { cn, formatDate, truncate } from '@/lib/utils/clinic';
-import { RatingButtons } from '@/components/library/RatingButtons';
+import { RatingButtons }     from '@/components/library/RatingButtons';
+import { ThreadsPostButton } from '@/components/ui/ThreadsPostButton';
 
 const TYPE_ICONS: Partial<Record<ContentType, React.ElementType>> = {
   FAQ:             FileText,
@@ -25,12 +26,13 @@ const STATUS_STYLES: Record<ContentStatus, string> = {
 };
 
 interface Props {
-  content: GeneratedContent;
+  content:        GeneratedContent;
+  clinicId:       string;                               // ← 追加
   onStatusChange: (id: string, status: ContentStatus) => Promise<void>;
   onRatingChange?: (id: string, rating: string) => void;
 }
 
-export function ContentCard({ content, onStatusChange, onRatingChange }: Props) {
+export function ContentCard({ content, clinicId, onStatusChange, onRatingChange }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied]     = useState(false);
   const [loading, setLoading]   = useState(false);
@@ -73,6 +75,14 @@ export function ContentCard({ content, onStatusChange, onRatingChange }: Props) 
           initialRating={content.rating ?? 'none'}
           size="sm"
           onRatingChange={(rating) => onRatingChange?.(content.id, rating)}
+        />
+
+        {/* Threads 投稿ボタン */}
+        <ThreadsPostButton
+          clinicId={clinicId}
+          contentId={content.id}
+          text={content.output}
+          size="sm"
         />
 
         {/* ステータスバッジ */}

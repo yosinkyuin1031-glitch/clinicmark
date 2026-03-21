@@ -31,7 +31,7 @@ export type ContentType =
   | 'FAQ' | 'INSTAGRAM_POST' | 'INSTAGRAM_STORY'
   | 'META_AD' | 'LP_SECTION' | 'IMAGE_PROMPT'
   | 'HP_CHECK' | 'COMPETITOR_MEMO' | 'MONTHLY_REVIEW' | 'SEMINAR_SCRIPT'
-  | 'MULTI_CONTENT';
+  | 'MULTI_CONTENT' | 'NOTE_DRAFT';
 
 // ─── 院 ────────────────────────────────────────────────
 export interface Clinic {
@@ -177,6 +177,7 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   MONTHLY_REVIEW:   '月次振り返り',
   SEMINAR_SCRIPT:   'セミナー原稿',
   MULTI_CONTENT:    '一括生成',
+  NOTE_DRAFT:       'note下書き',
 };
 
 // ─── AI生成 ────────────────────────────────────────────
@@ -885,4 +886,83 @@ export interface PersonalLineGenInput {
   sessionNote: string;
   lineType:    'follow_up' | 'reminder' | 'reactivation';
   tone:        'friendly' | 'formal' | 'casual';
+}
+
+// ─── Threads 予約投稿 ────────────────────────────────────
+export type ScheduledPostStatus =
+  | 'PENDING' | 'PROCESSING' | 'PUBLISHED' | 'FAILED' | 'CANCELLED';
+
+export interface ScheduledPost {
+  id:           string;
+  clinicId:     string;
+  platform:     'threads';
+  content:      string;
+  imageUrl:     string;
+  scheduledAt:  string;   // ISO string
+  status:       ScheduledPostStatus;
+  errorMessage: string;
+  publishedAt:  string | null;
+  contentId:    string;
+  createdAt:    string;
+  updatedAt:    string;
+}
+
+export interface ScheduledPostInput {
+  clinicId:   string;
+  content:    string;
+  imageUrl?:  string;
+  scheduledAt:string;  // ISO string
+  contentId?: string;
+}
+
+export const SCHEDULED_POST_STATUS_LABELS: Record<ScheduledPostStatus, string> = {
+  PENDING:    '予約中',
+  PROCESSING: '処理中',
+  PUBLISHED:  '投稿済み',
+  FAILED:     '失敗',
+  CANCELLED:  'キャンセル',
+};
+
+export const SCHEDULED_POST_STATUS_COLORS: Record<ScheduledPostStatus, string> = {
+  PENDING:    'bg-blue-100 text-blue-700',
+  PROCESSING: 'bg-amber-100 text-amber-700',
+  PUBLISHED:  'bg-green-100 text-green-700',
+  FAILED:     'bg-red-100 text-red-700',
+  CANCELLED:  'bg-slate-100 text-slate-500',
+};
+
+// ─── note.com 下書き生成 ─────────────────────────────────
+export type NoteType = 'story' | 'knowledge' | 'column';
+
+export const NOTE_TYPE_LABELS: Record<NoteType, string> = {
+  story:     '体験談・症例',
+  knowledge: 'お役立ち知識',
+  column:    'コラム',
+};
+
+export const NOTE_TYPE_DESCRIPTIONS: Record<NoteType, string> = {
+  story:     '患者さんの変化を語る読み物',
+  knowledge: '症状・対策を分かりやすく解説',
+  column:    '院長の考え・独自視点を語る',
+};
+
+export const NOTE_TYPES: NoteType[] = ['story', 'knowledge', 'column'];
+
+export interface NoteGenInput {
+  clinicId:    string;
+  theme:       string;       // 例: 腰痛で半年悩んでいた患者さんの話
+  noteType:    NoteType;
+  target:      string;       // 例: 30〜50代女性
+  charTarget:  number;       // 目標文字数（800〜3000）
+  writingStyle:'friendly' | 'formal' | 'casual';
+  cta:         string;       // 例: LINE で無料相談
+}
+
+export interface NoteGenResult {
+  contentId: string;
+  titles:    string[];   // タイトル候補 3案
+  body:      string;     // 本文（Markdown）
+  hashtags:  string[];   // note ハッシュタグ 5〜8個
+  seoMemo:   string;     // note SEO のポイントメモ
+  durationMs:number;
 }

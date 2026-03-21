@@ -9,6 +9,9 @@ import {
   type Flyer, type FlyerType, type FlyerGenInput,
 } from '@/types';
 import { getClinicColor, cn } from '@/lib/utils/clinic';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/hooks/useToast';
 
 const EMPTY_FORM: FlyerGenInput = {
   clinicId: '', theme: '', flyerType: 'A4', target: '', campaign: '', tone: 'friendly',
@@ -27,6 +30,7 @@ export default function FlyersPage() {
   const [panelTab,     setPanelTab]     = useState<'generate' | 'upload'>('generate');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter,   setTypeFilter]   = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // フォーム状態
   const [genInput, setGenInput] = useState<FlyerGenInput>({ ...EMPTY_FORM });
@@ -34,6 +38,7 @@ export default function FlyersPage() {
   const [editFields, setEditFields] = useState<Partial<Flyer>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toasts, removeToast, success, error: showError } = useToast();
 
   const fetchFlyers = useCallback(async () => {
     if (!currentClinic) return;
@@ -60,12 +65,14 @@ export default function FlyersPage() {
         body: JSON.stringify({ ...genInput, clinicId: currentClinic.id }),
       });
       const json = await res.json();
+      if (!res.ok) { showError(json.error ?? '生成に失敗しました'); return; }
       if (json.data) {
-        // 生成結果を編集フィールドに流し込み
         setEditFields((prev) => ({ ...prev, ...json.data }));
-        setPanelTab('upload'); // 確認・保存タブへ
+        setPanelTab('upload');
+        success('コピーを生成しました');
       }
-    } finally { setGenerating(false); }
+    } catch { showError('ネットワークエラーが発生しました'); }
+    finally { setGenerating(false); }
   }
 
   // ── ファイルアップロード ──────────────────────────────
@@ -102,19 +109,18 @@ export default function FlyersPage() {
       status:      editFields.status      ?? 'DRAFT',
     };
 
-    if (editTarget) {
-      await fetch(`/api/flyers/${editTarget.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    try {
+      const url    = editTarget ? `/api/flyers/${editTarget.id}` : '/api/flyers';
+      const method = editTarget ? 'PATCH' : 'POST';
+      const res    = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-    } else {
-      await fetch('/api/flyers', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    }
-    await fetchFlyers();
-    handleClosePanel();
+      if (!res.ok) { const j = await res.json(); showError(j.error ?? '保存に失敗しました'); return; }
+      success(editTarget ? '更新しました' : '保存しました');
+      await fetchFlyers();
+      handleClosePanel();
+    } catch { showError('ネットワークエラーが発生しました'); }
   }
 
   function handleOpenCreate() {
@@ -148,9 +154,17 @@ export default function FlyersPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('このチラシを削除しますか？')) return;
-    await fetch(`/api/flyers/${id}`, { method: 'DELETE' });
-    setFlyers((prev) => prev.filter((f) => f.id !== id));
+    setDeleteTarget(id);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await fetch(`/api/flyers/${deleteTarget}`, { method: 'DELETE' });
+      setFlyers((prev) => prev.filter((f) => f.id !== deleteTarget));
+      success('削除しました');
+    } catch { showError('削除に失敗しました'); }
+    finally { setDeleteTarget(null); }
   }
 
   if (!currentClinic) {
@@ -158,6 +172,7 @@ export default function FlyersPage() {
   }
 
   return (
+    <>
     <div className="max-w-5xl mx-auto">
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-6">
@@ -412,5 +427,16 @@ export default function FlyersPage() {
         </div>
       )}
     </div>
+
+    <ConfirmDialog
+      open={!!deleteTarget}
+      title="チラシを削除しますか？"
+      description="この操作は元に戻せません。"
+      confirmLabel="削除する"
+      onConfirm={confirmDelete}
+      onCancel={() => setDeleteTarget(null)}
+    />
+    <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </>
   );
 }

@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // ═══════════════════════════════════════════════════════
@@ -27,11 +26,36 @@ model Clinic {
   users             UserClinic[]
   contentMaps       ContentMap[]
   flyers            Flyer[]
-  lineTemplates     LineTemplate[]
-  lineScenarios     LineScenario[]
-  patients          Patient[]
+  lineTemplates      LineTemplate[]
+  lineScenarios      LineScenario[]
+  patients           Patient[]
+  socialConnections  SocialConnection[]
+  scheduledPosts     ScheduledPost[]
 
   @@map("clinics")
+}
+
+// ═══════════════════════════════════════════════════════
+// SNS連携（Threads / Instagram 等）
+// platform 値: "threads"
+// ═══════════════════════════════════════════════════════
+model SocialConnection {
+  id              String   @id @default(cuid())
+  clinicId        String
+  platform        String   // "threads"
+  platformUserId  String   // Threads user ID
+  username        String   @default("")
+  accessToken     String   // long-lived token (60日有効)
+  tokenExpiresAt  DateTime
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, platform])
+  @@index([clinicId])
+  @@map("social_connections")
 }
 
 // ═══════════════════════════════════════════════════════
@@ -307,6 +331,30 @@ model PatientVisit {
 
   @@index([patientId])
   @@map("patient_visits")
+}
+
+// ═══════════════════════════════════════════════════════
+// Threads 予約投稿
+// status 値: PENDING | PROCESSING | PUBLISHED | FAILED | CANCELLED
+// ═══════════════════════════════════════════════════════
+model ScheduledPost {
+  id           String    @id @default(cuid())
+  clinicId     String
+  platform     String    @default("threads") // 現在は threads のみ
+  content      String
+  imageUrl     String    @default("")
+  scheduledAt  DateTime
+  status       String    @default("PENDING") // PENDING | PROCESSING | PUBLISHED | FAILED | CANCELLED
+  errorMessage String    @default("")
+  publishedAt  DateTime?
+  contentId    String    @default("")        // 生成コンテンツとの紐付け（任意）
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, status, scheduledAt])
+  @@map("scheduled_posts")
 }
 
 // ═══════════════════════════════════════════════════════
