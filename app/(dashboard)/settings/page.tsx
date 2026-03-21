@@ -4,7 +4,7 @@ import { Settings, Building2, Info, Link2, Link2Off, Loader2, CheckCircle2, Aler
 import { useClinic } from '@/contexts/ClinicContext';
 import { useSession } from 'next-auth/react';
 import { getClinicColor, cn } from '@/lib/utils/clinic';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface ThreadsStatus {
@@ -15,6 +15,14 @@ interface ThreadsStatus {
 }
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">読み込み中...</div>}>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
   const { data: session }                                      = useSession();
   const { currentClinic, availableClinics, setClinic }        = useClinic();
   const color        = currentClinic ? getClinicColor(currentClinic.slug) : getClinicColor('');

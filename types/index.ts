@@ -877,6 +877,7 @@ export interface ScheduledPost {
   contentId:    string;
   clinicId:     string;
   platform:     string;
+  content:      string;
   scheduledAt:  string;
   status:       ScheduledPostStatus;
   publishedAt:  string | null;

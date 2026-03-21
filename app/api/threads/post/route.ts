@@ -36,14 +36,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (connection.tokenExpiresAt < new Date()) {
+  if (connection.expiresAt && connection.expiresAt < new Date()) {
     return NextResponse.json(
       { error: 'Threads の認証トークンが期限切れです。再連携してください。' },
       { status: 400 },
     );
   }
 
-  const { accessToken, platformUserId } = connection;
+  const { accessToken, userId: platformUserId } = connection;
 
   try {
     // ── Step 1: メディアコンテナ作成 ─────────────────────

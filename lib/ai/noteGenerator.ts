@@ -193,7 +193,7 @@ export async function generateNote(
   input:        NoteGenInput,
   brandContext: string,
   clinicName:   string,
-): Promise<Omit<NoteGenResult, 'contentId' | 'durationMs'>> {
+): Promise<Omit<NoteGenResult, 'contentId' | 'durationMs' | 'charCount'>> {
   // ── 本番LLM ──────────────────────────────────────────
   if (!IS_MOCK_MODE) {
     try {

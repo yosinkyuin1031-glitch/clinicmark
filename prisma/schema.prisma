@@ -347,6 +347,7 @@ model SocialConnection {
   accessToken  String
   userId       String   // Threads user ID
   username     String   @default("")
+  isActive     Boolean  @default(true)
   expiresAt    DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -365,7 +366,7 @@ model ScheduledPost {
   id          String    @id @default(cuid())
   clinicId    String
   platform    String    @default("threads")
-  text        String
+  content     String
   imageUrl    String    @default("")
   status      String    @default("PENDING")
   scheduledAt DateTime

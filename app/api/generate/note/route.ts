@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
   const result: NoteGenResult = {
     contentId: content.id,
     ...generated,
+    charCount: generated.body.length,
     durationMs,
   };
 

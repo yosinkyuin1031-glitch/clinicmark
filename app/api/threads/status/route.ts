@@ -15,18 +15,18 @@ export async function GET(req: NextRequest) {
 
   const connection = await prisma.socialConnection.findUnique({
     where:  { clinicId_platform: { clinicId, platform: 'threads' } },
-    select: { isActive: true, username: true, tokenExpiresAt: true },
+    select: { isActive: true, username: true, expiresAt: true },
   });
 
   if (!connection || !connection.isActive) {
     return NextResponse.json({ connected: false });
   }
 
-  const isExpired = connection.tokenExpiresAt < new Date();
+  const isExpired = connection.expiresAt ? connection.expiresAt < new Date() : false;
   return NextResponse.json({
     connected:      !isExpired,
     username:       connection.username,
-    tokenExpiresAt: connection.tokenExpiresAt,
+    tokenExpiresAt: connection.expiresAt,
     isExpired,
   });
 }

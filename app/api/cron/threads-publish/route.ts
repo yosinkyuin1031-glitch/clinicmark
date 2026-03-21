@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       }
 
       // Threadsに投稿
-      await publishToThreads(connection.userId, connection.accessToken, post.text);
+      await publishToThreads(connection.userId, connection.accessToken, post.content);
 
       // 成功
       await prisma.scheduledPost.update({
