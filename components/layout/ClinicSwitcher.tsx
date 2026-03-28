@@ -33,6 +33,8 @@ export function ClinicSwitcher() {
           'flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition hover:bg-slate-50',
           color.border,
         )}
+        aria-label="院を切り替え"
+        aria-expanded={open}
       >
         <div className={cn('w-2.5 h-2.5 rounded-full', color.bg)} />
         <span className="text-sm font-semibold text-slate-800 max-w-[120px] truncate">

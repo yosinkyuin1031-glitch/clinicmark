@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 import type { BrandEntry } from '@/types';
 import { cn } from '@/lib/utils/clinic';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface Props {
   entry: BrandEntry;
@@ -12,10 +13,11 @@ interface Props {
 }
 
 export function DictionaryCard({ entry, onUpdate, onDelete }: Props) {
-  const [editing, setEditing]   = useState(false);
-  const [key, setKey]           = useState(entry.key);
-  const [value, setValue]       = useState(entry.value);
-  const [loading, setLoading]   = useState(false);
+  const [editing, setEditing]             = useState(false);
+  const [key, setKey]                     = useState(entry.key);
+  const [value, setValue]                 = useState(entry.value);
+  const [loading, setLoading]             = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   async function handleSave() {
     setLoading(true);
@@ -31,7 +33,11 @@ export function DictionaryCard({ entry, onUpdate, onDelete }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm(`「${entry.key}」を削除しますか？`)) return;
+    setShowDeleteConfirm(true);
+  }
+
+  async function confirmDelete() {
+    setShowDeleteConfirm(false);
     setLoading(true);
     await onDelete(entry.id);
     setLoading(false);
@@ -86,17 +92,29 @@ export function DictionaryCard({ entry, onUpdate, onDelete }: Props) {
           <button
             onClick={() => setEditing(true)}
             className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition"
+            aria-label={`${entry.key}を編集`}
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={handleDelete}
             className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+            aria-label={`${entry.key}を削除`}
           >
             <Trash2 size={14} />
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={`「${entry.key}」を削除しますか？`}
+        description="この操作は元に戻せません。"
+        confirmLabel="削除する"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }

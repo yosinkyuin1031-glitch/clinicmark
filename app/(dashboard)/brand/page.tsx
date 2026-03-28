@@ -12,6 +12,7 @@ import {
   type ClinicBrandProfileInput,
 } from '@/types';
 import { getClinicColor, cn } from '@/lib/utils/clinic';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 
 // ─── タブ定義 ─────────────────────────────────────────
 type ActiveTab = 'PROFILE' | BrandCategory;
@@ -394,9 +395,7 @@ export default function BrandPage() {
               </div>
 
               {profLoading ? (
-                <div className="flex items-center justify-center h-32 text-slate-400 text-sm">
-                  読み込み中...
-                </div>
+                <PageSkeleton />
               ) : (
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
                   {PROFILE_FIELDS.map(({ key, label, hint, rows, placeholder }) => (

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { getClinicColor, cn } from '@/lib/utils/clinic';
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { SuspenseSkeleton } from '@/components/ui/Skeleton';
 
 interface ThreadsStatus {
   connected:      boolean;
@@ -16,7 +17,7 @@ interface ThreadsStatus {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-400">読み込み中...</div>}>
+    <Suspense fallback={<SuspenseSkeleton />}>
       <SettingsContent />
     </Suspense>
   );

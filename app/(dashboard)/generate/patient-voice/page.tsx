@@ -13,6 +13,7 @@ import {
 import { Mic2, Copy, Check, AlertTriangle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils/clinic';
 import { getClinicColor } from '@/lib/utils/clinic';
+import { SuspenseSkeleton } from '@/components/ui/Skeleton';
 import { RatingButtons } from '@/components/library/RatingButtons';
 import { CanvaButton } from '@/components/ui/CanvaButton';
 
@@ -109,7 +110,7 @@ function OutputCard({ item }: { item: PatientVoiceOutputItem }) {
 // ─── Main Page ────────────────────────────────────────────
 export default function PatientVoicePage() {
   return (
-    <Suspense fallback={<div className="p-6 text-slate-500">読み込み中...</div>}>
+    <Suspense fallback={<SuspenseSkeleton />}>
       <PatientVoicePageContent />
     </Suspense>
   );

@@ -50,6 +50,7 @@ export function ConfirmDialog({
           <button
             onClick={onCancel}
             className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 transition shrink-0"
+            aria-label="ダイアログを閉じる"
           >
             <X size={16} />
           </button>

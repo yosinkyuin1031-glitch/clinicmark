@@ -49,6 +49,7 @@ function ToastItem({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
       <button
         onClick={() => { setVisible(false); setTimeout(() => onRemove(toast.id), 300); }}
         className="shrink-0 text-current opacity-50 hover:opacity-80 transition"
+        aria-label="通知を閉じる"
       >
         <X size={14} />
       </button>

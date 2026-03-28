@@ -5,6 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import { AtSign, Send, Clock, CheckCircle2, XCircle, Trash2, Link2, Unlink } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { getClinicColor, cn } from '@/lib/utils/clinic';
+import { SuspenseSkeleton } from '@/components/ui/Skeleton';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/hooks/useToast';
 
 interface Connection {
   id: string;
@@ -24,7 +28,7 @@ interface ScheduledPost {
 
 export default function ThreadsPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-slate-500">読み込み中...</div>}>
+    <Suspense fallback={<SuspenseSkeleton />}>
       <ThreadsPageContent />
     </Suspense>
   );
@@ -41,6 +45,8 @@ function ThreadsPageContent() {
   const [newText, setNewText] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'disconnect' | 'cancel'; id?: string } | null>(null);
+  const { toasts, removeToast, success: showSuccess, error: showError } = useToast();
 
   const clinicId = currentClinic?.id;
 
@@ -86,11 +92,9 @@ function ThreadsPageContent() {
   // Threads連携開始
   const handleConnect = () => {
     if (!clinicId) return;
-    window.location.href = `/api/threads/callback?start=true&state=${clinicId}`;
-    // 実際はgetThreadsAuthUrlを使う。環境変数が設定されていない場合はアラート
     const appId = process.env.NEXT_PUBLIC_THREADS_APP_ID;
     if (!appId) {
-      alert('Threads連携にはTHREADS_APP_IDの設定が必要です。設定画面から環境変数を確認してください。');
+      showError('Threads連携にはTHREADS_APP_IDの設定が必要です。設定画面から環境変数を確認してください。');
       return;
     }
     const redirectUri = `${window.location.origin}/api/threads/callback`;
@@ -99,14 +103,19 @@ function ThreadsPageContent() {
   };
 
   // 連携解除
-  const handleDisconnect = async () => {
-    if (!confirm('Threads連携を解除しますか？予約中の投稿もキャンセルされます。')) return;
+  const handleDisconnect = () => {
+    setConfirmAction({ type: 'disconnect' });
+  };
+
+  const executeDisconnect = async () => {
+    setConfirmAction(null);
     await fetch('/api/threads/disconnect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ clinicId }),
     });
     setConnection(null);
+    showSuccess('Threads連携を解除しました');
     window.location.reload();
   };
 
@@ -123,19 +132,27 @@ function ThreadsPageContent() {
       });
       setNewText('');
       setScheduledAt('');
+      showSuccess('投稿を予約しました');
       // 再読み込み
       const res = await fetch(`/api/threads/schedule?clinicId=${clinicId}`);
       setPosts(await res.json());
     } catch {
-      alert('予約に失敗しました');
+      showError('予約に失敗しました');
     }
     setSubmitting(false);
   };
 
   // 投稿キャンセル
-  const handleCancel = async (id: string) => {
-    if (!confirm('この予約をキャンセルしますか？')) return;
+  const handleCancel = (id: string) => {
+    setConfirmAction({ type: 'cancel', id });
+  };
+
+  const executeCancel = async () => {
+    if (!confirmAction?.id) return;
+    const id = confirmAction.id;
+    setConfirmAction(null);
     await fetch(`/api/threads/posts?id=${id}`, { method: 'DELETE' });
+    showSuccess('予約をキャンセルしました');
     const res = await fetch(`/api/threads/schedule?clinicId=${clinicId}`);
     setPosts(await res.json());
   };
@@ -198,6 +215,7 @@ function ThreadsPageContent() {
           <button
             onClick={handleConnect}
             className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white', color.bg)}
+            aria-label="Threadsアカウントを連携する"
           >
             <Link2 size={16} />
             Threadsを連携する
@@ -205,6 +223,7 @@ function ThreadsPageContent() {
           <button
             onClick={handleDisconnect}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-500 border border-slate-200 hover:bg-slate-50"
+            aria-label="Threads連携を解除する"
           >
             <Unlink size={16} />
             連携解除
@@ -225,7 +244,10 @@ function ThreadsPageContent() {
               placeholder="投稿する内容を入力...&#10;&#10;ブランド辞書の内容を参考にして、一括生成やInstagram台本で作ったコンテンツをここに貼り付けることもできます。"
               required
             />
-            <p className="text-xs text-slate-400 mt-1">{newText.length} / 500文字</p>
+            <p className={cn('text-xs mt-1', newText.length > 500 ? 'text-red-500 font-medium' : 'text-slate-400')}>
+              {newText.length} / 500文字
+              {newText.length > 500 && ' (上限を超えています)'}
+            </p>
           </div>
           <div>
             <label className="block text-sm text-slate-600 mb-1">投稿日時</label>
@@ -239,11 +261,12 @@ function ThreadsPageContent() {
           </div>
           <button
             type="submit"
-            disabled={submitting || !newText.trim() || !scheduledAt}
+            disabled={submitting || !newText.trim() || !scheduledAt || newText.length > 500}
             className={cn(
               'flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40',
               color.bg,
             )}
+            aria-label="投稿を予約する"
           >
             <Send size={16} />
             {submitting ? '予約中...' : '予約する'}
@@ -267,6 +290,7 @@ function ThreadsPageContent() {
                       onClick={() => handleCancel(post.id)}
                       className="text-slate-400 hover:text-red-500 flex-shrink-0"
                       title="キャンセル"
+                      aria-label="この予約をキャンセル"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -290,6 +314,25 @@ function ThreadsPageContent() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        title={
+          confirmAction?.type === 'disconnect'
+            ? 'Threads連携を解除しますか？'
+            : 'この予約をキャンセルしますか？'
+        }
+        description={
+          confirmAction?.type === 'disconnect'
+            ? '予約中の投稿もキャンセルされます。'
+            : undefined
+        }
+        confirmLabel={confirmAction?.type === 'disconnect' ? '解除する' : 'キャンセルする'}
+        danger
+        onConfirm={confirmAction?.type === 'disconnect' ? executeDisconnect : executeCancel}
+        onCancel={() => setConfirmAction(null)}
+      />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

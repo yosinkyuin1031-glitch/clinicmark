@@ -241,6 +241,7 @@ export function ContentMapTable({ items, accentBg, onUpdate, onDelete }: Props) 
                       onClick={() => startEdit(item)}
                       className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
                       title="編集"
+                      aria-label={`${item.title}を編集`}
                     >
                       <Pencil size={14} />
                     </button>
@@ -249,6 +250,7 @@ export function ContentMapTable({ items, accentBg, onUpdate, onDelete }: Props) 
                       disabled={isDeleting}
                       className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition"
                       title="削除"
+                      aria-label={`${item.title}を削除`}
                     >
                       <Trash2 size={14} />
                     </button>

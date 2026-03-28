@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Map, Plus, LayoutGrid, Table2, Loader2 } from 'lucide-react';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { useClinic } from '@/contexts/ClinicContext';
 import { getClinicColor, cn } from '@/lib/utils/clinic';
 import {
@@ -396,10 +397,7 @@ export default function ContentMapPage() {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-slate-400">
-            <Loader2 size={28} className="animate-spin mr-3" />
-            <span className="text-sm">読み込み中...</span>
-          </div>
+          <TableSkeleton />
         ) : viewMode === 'table' ? (
           <ContentMapTable
             items={filteredItems}
