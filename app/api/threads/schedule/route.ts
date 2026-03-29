@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     data: {
       clinicId,
       platform: 'threads',
-      content: text,
+      text,
       scheduledAt: new Date(scheduledAt),
       contentId: contentId || null,
     },

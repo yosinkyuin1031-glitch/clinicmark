@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     where: { clinicId_platform: { clinicId, platform: 'threads' } },
   });
 
-  if (!connection || !connection.isActive) {
+  if (!connection) {
     return NextResponse.json(
       { error: 'Threads が連携されていません。設定画面から連携してください。' },
       { status: 400 },

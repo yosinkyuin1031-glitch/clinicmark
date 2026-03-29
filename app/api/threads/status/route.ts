@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
 
   const connection = await prisma.socialConnection.findUnique({
     where:  { clinicId_platform: { clinicId, platform: 'threads' } },
-    select: { isActive: true, username: true, expiresAt: true },
+    select: { username: true, expiresAt: true },
   });
 
-  if (!connection || !connection.isActive) {
+  if (!connection) {
     return NextResponse.json({ connected: false });
   }
 

@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       data: {
         clinicId,
         platform:   'threads',
-        content,
+        text:       content,
         imageUrl:   imageUrl ?? '',
         scheduledAt: scheduledDate,
         contentId:  contentId ?? '',
