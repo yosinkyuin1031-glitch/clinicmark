@@ -3,6 +3,61 @@ import type { ScenarioGenInput, GeneratedStep, ScenarioType } from '@/types';
 import { SCENARIO_TYPE_LABELS } from '@/types';
 import { buildBrandContext } from '@/lib/ai/buildPrompt';
 
+// ─── バリデーション ─────────────────────────────────────
+function validateGeneratedSteps(steps: unknown): GeneratedStep[] {
+  if (!Array.isArray(steps)) {
+    throw new Error('生成結果がJSON配列ではありません');
+  }
+  if (steps.length === 0) {
+    throw new Error('生成されたステップが0件です');
+  }
+
+  return steps.map((step, i) => {
+    if (!step || typeof step !== 'object') {
+      throw new Error(`ステップ${i + 1}が不正なオブジェクトです`);
+    }
+
+    const s = step as Record<string, unknown>;
+
+    // Required fields
+    if (typeof s.stepNumber !== 'number') {
+      throw new Error(`ステップ${i + 1}: stepNumberが不正です`);
+    }
+    if (typeof s.title !== 'string' || s.title.length === 0) {
+      throw new Error(`ステップ${i + 1}: titleが空です`);
+    }
+    if (typeof s.message !== 'string' || s.message.length === 0) {
+      throw new Error(`ステップ${i + 1}: messageが空です`);
+    }
+
+    // LINE message max length
+    if (s.message.length > 1000) {
+      // Truncate instead of failing (AI may slightly exceed)
+      s.message = (s.message as string).slice(0, 1000);
+    }
+
+    // Delay validation
+    const delayDays = typeof s.delayDays === 'number' ? s.delayDays : 0;
+    const delayHours = typeof s.delayHours === 'number' ? s.delayHours : 0;
+
+    if (delayDays < 0 || delayDays > 365) {
+      throw new Error(`ステップ${i + 1}: delayDaysが範囲外です（0〜365）`);
+    }
+    if (delayHours < 0 || delayHours > 23) {
+      throw new Error(`ステップ${i + 1}: delayHoursが範囲外です（0〜23）`);
+    }
+
+    return {
+      stepNumber: s.stepNumber as number,
+      title:      s.title as string,
+      message:    s.message as string,
+      delayDays,
+      delayHours,
+      condition:  typeof s.condition === 'string' ? s.condition : '',
+    };
+  });
+}
+
 // ─── モックデータ ──────────────────────────────────────
 const MOCK_STEPS: Record<ScenarioType, (theme: string, tone: string) => GeneratedStep[]> = {
   pre_visit: (theme) => [
@@ -184,9 +239,19 @@ export async function generateLineScenario(
     const result = await generateText({ prompt, maxTokens: 2000 });
     const text = result.text.trim();
     const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('JSON array not found');
-    return JSON.parse(jsonMatch[0]) as GeneratedStep[];
-  } catch {
+    if (!jsonMatch) throw new Error('JSON array not found in AI response');
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      console.error('[lineScenarioGenerator] JSON parse failed:', parseErr);
+      throw new Error('AIの生成結果をJSONとしてパースできませんでした');
+    }
+
+    return validateGeneratedSteps(parsed);
+  } catch (err) {
+    console.error('[lineScenarioGenerator] Falling back to mock:', err);
     return mockScenario(input);
   }
 }

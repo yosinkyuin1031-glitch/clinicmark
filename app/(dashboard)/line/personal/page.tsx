@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useClinic } from '@/contexts/ClinicContext';
 import {
   UserRound, Plus, Copy, Check, Loader2, ChevronRight,
-  Calendar, Hash, MessageCircle, X, Save, Sparkles,
+  Calendar, Hash, MessageCircle, X, Save, Sparkles, AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/clinic';
 import { getClinicColor } from '@/lib/utils/clinic';
@@ -69,6 +69,7 @@ export default function PersonalLinePage() {
   const [patients,         setPatients]         = useState<Patient[]>([]);
   const [selectedPatient,  setSelectedPatient]  = useState<(Patient & { visits: PatientVisit[] }) | null>(null);
   const [isLoadingList,    setIsLoadingList]     = useState(true);
+  const [listError,        setListError]         = useState<string | null>(null);
   const [showNewPatient,   setShowNewPatient]    = useState(false);
 
   // New patient form
@@ -87,16 +88,26 @@ export default function PersonalLinePage() {
   const [tone,        setTone]        = useState<'friendly' | 'formal' | 'casual'>('friendly');
   const [generatedMsg, setGeneratedMsg] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [copied,       setCopied]       = useState(false);
 
   // Load patients
   const loadPatients = useCallback(async () => {
     if (!currentClinic) return;
     setIsLoadingList(true);
+    setListError(null);
     try {
       const res = await fetch(`/api/patients?clinicId=${currentClinic.id}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `サーバーエラー (${res.status})`);
+      }
       const data = await res.json();
-      if (res.ok) setPatients(data.data);
+      setPatients(data.data);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '患者一覧の取得に失敗しました';
+      setListError(msg);
+      console.error('[loadPatients]', e);
     } finally {
       setIsLoadingList(false);
     }
@@ -106,12 +117,23 @@ export default function PersonalLinePage() {
 
   // Select patient (load detail)
   const selectPatient = async (id: string) => {
-    const res = await fetch(`/api/patients/${id}`);
-    const data = await res.json();
-    if (res.ok) setSelectedPatient(data.data);
-    setGeneratedMsg('');
-    setSessionNote('');
-    setNextAction('');
+    try {
+      const res = await fetch(`/api/patients/${id}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || '患者情報の取得に失敗しました');
+      }
+      const data = await res.json();
+      setSelectedPatient(data.data);
+      setGeneratedMsg('');
+      setGenerateError(null);
+      setSessionNote('');
+      setNextAction('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '患者情報の取得に失敗しました';
+      alert(msg);
+      console.error('[selectPatient]', e);
+    }
   };
 
   // Create patient
@@ -124,11 +146,17 @@ export default function PersonalLinePage() {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ clinicId: currentClinic.id, name: newName, symptom: newSymptom, phone: newPhone }),
       });
-      if (res.ok) {
-        setNewName(''); setNewSymptom(''); setNewPhone('');
-        setShowNewPatient(false);
-        await loadPatients();
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || '患者の追加に失敗しました');
       }
+      setNewName(''); setNewSymptom(''); setNewPhone('');
+      setShowNewPatient(false);
+      await loadPatients();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '患者の追加に失敗しました';
+      alert(msg);
+      console.error('[createPatient]', e);
     } finally {
       setIsSavingPatient(false);
     }
@@ -144,10 +172,16 @@ export default function PersonalLinePage() {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ sessionNote, nextAction }),
       });
-      if (res.ok) {
-        await selectPatient(selectedPatient.id);
-        await loadPatients();
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || '来院記録の保存に失敗しました');
       }
+      await selectPatient(selectedPatient.id);
+      await loadPatients();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '来院記録の保存に失敗しました';
+      alert(msg);
+      console.error('[addVisit]', e);
     } finally {
       setIsSavingVisit(false);
     }
@@ -161,6 +195,7 @@ export default function PersonalLinePage() {
 
     setIsGenerating(true);
     setGeneratedMsg('');
+    setGenerateError(null);
     try {
       const res = await fetch('/api/generate/personal-line', {
         method:  'POST',
@@ -173,8 +208,20 @@ export default function PersonalLinePage() {
           tone,
         }),
       });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'LINE生成に失敗しました');
+      }
       const data = await res.json();
-      if (res.ok) setGeneratedMsg(data.data.message);
+      if (data.data?.message) {
+        setGeneratedMsg(data.data.message);
+      } else {
+        throw new Error('生成結果が空でした');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'LINE生成に失敗しました';
+      setGenerateError(msg);
+      console.error('[generateLine]', e);
     } finally {
       setIsGenerating(false);
     }
@@ -189,7 +236,7 @@ export default function PersonalLinePage() {
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
 
-      {/* ── LEFT: 患者一覧 ── */}
+      {/* -- LEFT: 患者一覧 -- */}
       <div className="w-64 shrink-0 border-r border-slate-200 bg-white flex flex-col">
         <div className="px-4 py-4 border-b border-slate-100">
           <div className="flex items-center justify-between mb-3">
@@ -229,7 +276,7 @@ export default function PersonalLinePage() {
                   disabled={isSavingPatient || !newName.trim()}
                   className={cn('flex-1 text-xs py-1.5 rounded-lg text-white font-medium transition', isSavingPatient || !newName.trim() ? 'bg-slate-300' : cn('hover:opacity-90', color.bg))}
                 >
-                  {isSavingPatient ? '保存中…' : '追加'}
+                  {isSavingPatient ? '保存中...' : '追加'}
                 </button>
                 <button onClick={() => setShowNewPatient(false)} className="px-2 py-1.5 rounded-lg text-slate-400 hover:bg-slate-100">
                   <X size={12} />
@@ -244,6 +291,12 @@ export default function PersonalLinePage() {
           {isLoadingList ? (
             <div className="flex justify-center pt-8">
               <Loader2 size={20} className="animate-spin text-slate-300" />
+            </div>
+          ) : listError ? (
+            <div className="text-center pt-8 px-3">
+              <AlertCircle size={28} className="mx-auto mb-2 text-red-300" />
+              <p className="text-xs text-red-500">{listError}</p>
+              <button onClick={loadPatients} className="mt-2 text-xs text-blue-600 hover:underline">再読み込み</button>
             </div>
           ) : patients.length === 0 ? (
             <div className="text-center pt-8 text-slate-400">
@@ -263,7 +316,7 @@ export default function PersonalLinePage() {
         </div>
       </div>
 
-      {/* ── RIGHT: 患者詳細 + LINE生成 ── */}
+      {/* -- RIGHT: 患者詳細 + LINE生成 -- */}
       <div className="flex-1 overflow-y-auto bg-slate-50">
         {!selectedPatient ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-400">
@@ -322,7 +375,7 @@ export default function PersonalLinePage() {
                 )}
               >
                 <Save size={14} />
-                {isSavingVisit ? '保存中…' : '来院記録を保存'}
+                {isSavingVisit ? '保存中...' : '来院記録を保存'}
               </button>
             </div>
 
@@ -384,6 +437,17 @@ export default function PersonalLinePage() {
                   : <><Sparkles size={15} />{selectedPatient.name}さん向けLINEを生成</>}
               </button>
             </div>
+
+            {/* 生成エラー */}
+            {generateError && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>{generateError}</span>
+                <button onClick={() => setGenerateError(null)} className="ml-auto text-red-400 hover:text-red-600">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
 
             {/* 生成結果 */}
             {generatedMsg && (

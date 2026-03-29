@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  GitBranch, Plus, X, Sparkles, Loader2, RefreshCw,
+  GitBranch, Plus, X, Sparkles, Loader2, RefreshCw, AlertCircle,
 } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { ScenarioCard } from '@/components/line/ScenarioCard';
@@ -24,6 +24,7 @@ export default function LineStepsPage() {
 
   const [scenarios,    setScenarios]    = useState<LineScenario[]>([]);
   const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
   const [selected,     setSelected]     = useState<LineScenario | null>(null);
   const [panelMode,    setPanelMode]    = useState<PanelMode>(null);
   const [typeFilter,      setTypeFilter]      = useState<ScenarioType | ''>('');
@@ -47,10 +48,15 @@ export default function LineStepsPage() {
   const fetchScenarios = useCallback(async () => {
     if (!currentClinic) return;
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({ clinicId: currentClinic.id });
       if (typeFilter) params.set('scenarioType', typeFilter);
       const res  = await fetch(`/api/line/scenarios?${params}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `サーバーエラー (${res.status})`);
+      }
       const json = await res.json();
       const items = json.data ?? [];
       setScenarios(items);
@@ -59,6 +65,10 @@ export default function LineStepsPage() {
         const updated = items.find((s: LineScenario) => s.id === selected.id);
         if (updated) setSelected(updated);
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'シナリオの取得に失敗しました';
+      setError(msg);
+      console.error('[fetchScenarios]', e);
     } finally { setLoading(false); }
   }, [currentClinic, typeFilter, selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -76,19 +86,30 @@ export default function LineStepsPage() {
 
   async function handleSaveScenario() {
     if (!currentClinic || !formTitle) return;
-    const res = await fetch('/api/line/scenarios', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clinicId: currentClinic.id,
-        title: formTitle, scenarioType: formType,
-        description: formDescription, triggerMemo: formTriggerMemo,
-      }),
-    });
-    const json = await res.json();
-    await fetchScenarios();
-    setSelected(json.data);
-    closePanel();
+    try {
+      const res = await fetch('/api/line/scenarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinicId: currentClinic.id,
+          title: formTitle, scenarioType: formType,
+          description: formDescription, triggerMemo: formTriggerMemo,
+        }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'シナリオの作成に失敗しました');
+      }
+      const json = await res.json();
+      await fetchScenarios();
+      setSelected(json.data);
+      closePanel();
+      success('シナリオを作成しました');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'シナリオの作成に失敗しました';
+      showError(msg);
+      console.error('[handleSaveScenario]', e);
+    }
   }
 
   // ─── AI 一括生成 ───────────────────────────────────────
@@ -108,6 +129,10 @@ export default function LineStepsPage() {
           triggerMemo: '',
         }),
       });
+      if (!scenarioRes.ok) {
+        const errJson = await scenarioRes.json().catch(() => ({}));
+        throw new Error(errJson.error || 'シナリオの作成に失敗しました');
+      }
       const scenarioJson = await scenarioRes.json();
       const newScenario: LineScenario = scenarioJson.data;
 
@@ -124,16 +149,23 @@ export default function LineStepsPage() {
           tone: aiTone,
         }),
       });
+      if (!genRes.ok) {
+        const errJson = await genRes.json().catch(() => ({}));
+        throw new Error(errJson.error || 'AIステップ生成に失敗しました');
+      }
       const genJson = await genRes.json();
       const generatedSteps = genJson.data?.steps ?? [];
 
       // 3. 各ステップを順番に登録
       for (const step of generatedSteps) {
-        await fetch(`/api/line/scenarios/${newScenario.id}/steps`, {
+        const stepRes = await fetch(`/api/line/scenarios/${newScenario.id}/steps`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(step),
         });
+        if (!stepRes.ok) {
+          console.error('[handleAIGenerate] step save failed:', await stepRes.text());
+        }
       }
 
       await fetchScenarios();
@@ -141,6 +173,11 @@ export default function LineStepsPage() {
       const updated = await fetch(`/api/line/scenarios/${newScenario.id}`).then((r) => r.json());
       setSelected(updated.data);
       closePanel();
+      success('AIでシナリオを生成しました');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'AI生成に失敗しました';
+      showError(msg);
+      console.error('[handleAIGenerate]', e);
     } finally { setGenerating(false); }
   }
 
@@ -152,42 +189,80 @@ export default function LineStepsPage() {
   async function confirmDeleteScenario() {
     if (!deleteScenario) return;
     try {
-      await fetch(`/api/line/scenarios/${deleteScenario}`, { method: 'DELETE' });
+      const res = await fetch(`/api/line/scenarios/${deleteScenario}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || '削除に失敗しました');
+      }
       setScenarios((prev) => prev.filter((s) => s.id !== deleteScenario));
       if (selected?.id === deleteScenario) setSelected(null);
       success('シナリオを削除しました');
-    } catch { showError('削除に失敗しました'); }
-    finally { setDeleteScenario(null); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '削除に失敗しました';
+      showError(msg);
+      console.error('[confirmDeleteScenario]', e);
+    } finally { setDeleteScenario(null); }
   }
 
   async function handleToggle(id: string, isActive: boolean) {
-    await fetch(`/api/line/scenarios/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive }),
-    });
-    setScenarios((prev) => prev.map((s) => s.id === id ? { ...s, isActive } : s));
-    if (selected?.id === id) setSelected((s) => s ? { ...s, isActive } : s);
+    try {
+      const res = await fetch(`/api/line/scenarios/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive }),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || '更新に失敗しました');
+      }
+      setScenarios((prev) => prev.map((s) => s.id === id ? { ...s, isActive } : s));
+      if (selected?.id === id) setSelected((s) => s ? { ...s, isActive } : s);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '更新に失敗しました';
+      showError(msg);
+      console.error('[handleToggle]', e);
+    }
   }
 
   // ─── ステップ操作 ──────────────────────────────────────
   async function handleAddStep(step: Omit<LineStep, 'id' | 'scenarioId' | 'stepNumber' | 'createdAt' | 'updatedAt'>) {
     if (!selected) return;
-    await fetch(`/api/line/scenarios/${selected.id}/steps`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(step),
-    });
-    await refreshSelected();
+    try {
+      const res = await fetch(`/api/line/scenarios/${selected.id}/steps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(step),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'ステップの追加に失敗しました');
+      }
+      await refreshSelected();
+      success('ステップを追加しました');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'ステップの追加に失敗しました';
+      showError(msg);
+      console.error('[handleAddStep]', e);
+    }
   }
 
   async function handleEditStep(id: string, data: Partial<LineStep>) {
-    await fetch(`/api/line/steps/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    await refreshSelected();
+    try {
+      const res = await fetch(`/api/line/steps/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'ステップの更新に失敗しました');
+      }
+      await refreshSelected();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'ステップの更新に失敗しました';
+      showError(msg);
+      console.error('[handleEditStep]', e);
+    }
   }
 
   async function handleDeleteStep(id: string) {
@@ -197,10 +272,17 @@ export default function LineStepsPage() {
   async function confirmDeleteStep() {
     if (!deleteStep) return;
     try {
-      await fetch(`/api/line/steps/${deleteStep}`, { method: 'DELETE' });
+      const res = await fetch(`/api/line/steps/${deleteStep}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'ステップの削除に失敗しました');
+      }
       success('ステップを削除しました');
-    } catch { showError('削除に失敗しました'); }
-    finally {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '削除に失敗しました';
+      showError(msg);
+      console.error('[confirmDeleteStep]', e);
+    } finally {
       setDeleteStep(null);
       await refreshSelected();
     }
@@ -208,10 +290,15 @@ export default function LineStepsPage() {
 
   async function refreshSelected() {
     if (!selected) return;
-    const res  = await fetch(`/api/line/scenarios/${selected.id}`);
-    const json = await res.json();
-    setSelected(json.data);
-    setScenarios((prev) => prev.map((s) => s.id === selected.id ? json.data : s));
+    try {
+      const res  = await fetch(`/api/line/scenarios/${selected.id}`);
+      if (!res.ok) throw new Error('シナリオの更新取得に失敗しました');
+      const json = await res.json();
+      setSelected(json.data);
+      setScenarios((prev) => prev.map((s) => s.id === selected.id ? json.data : s));
+    } catch (e) {
+      console.error('[refreshSelected]', e);
+    }
   }
 
   if (!currentClinic) {
@@ -239,6 +326,17 @@ export default function LineStepsPage() {
           <Plus size={15} /> 新規作成
         </button>
       </div>
+
+      {/* エラー表示 */}
+      {error && (
+        <div className="mb-5 flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertCircle size={16} className="shrink-0" />
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* タイプフィルター */}
       <div className="flex flex-wrap gap-2 mb-5">
@@ -354,6 +452,7 @@ export default function LineStepsPage() {
                   <input
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
+                    maxLength={100}
                     placeholder="例: 初回来院後フォローアップ"
                     className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />

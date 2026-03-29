@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { MessageCircle, Plus, X, Sparkles, Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { MessageCircle, Plus, X, Sparkles, Loader2, PlusCircle, Trash2, AlertCircle } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { TemplateCard } from '@/components/line/TemplateCard';
 import {
@@ -23,6 +23,7 @@ export default function LineTemplatesPage() {
 
   const [templates,      setTemplates]      = useState<LineTemplate[]>([]);
   const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
   const [panelMode,      setPanelMode]      = useState<PanelMode>(null);
   const [editTarget,     setEditTarget]     = useState<LineTemplate | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<LineCategory | ''>('');
@@ -41,12 +42,21 @@ export default function LineTemplatesPage() {
   const fetchTemplates = useCallback(async () => {
     if (!currentClinic) return;
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({ clinicId: currentClinic.id });
       if (categoryFilter) params.set('category', categoryFilter);
       const res  = await fetch(`/api/line/templates?${params}`);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `サーバーエラー (${res.status})`);
+      }
       const json = await res.json();
       setTemplates(json.data ?? []);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'テンプレートの取得に失敗しました';
+      setError(msg);
+      console.error('[fetchTemplates]', e);
     } finally { setLoading(false); }
   }, [currentClinic, categoryFilter]);
 
@@ -76,11 +86,17 @@ export default function LineTemplatesPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clinicId: currentClinic.id, category: formCategory, context: formContext, tone: formTone }),
       });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'AI生成に失敗しました');
+      }
       const json = await res.json();
-      if (!res.ok) { showError(json.error ?? '生成に失敗しました'); return; }
       if (json.data?.message) { setFormMessage(json.data.message); success('メッセージを生成しました'); }
-    } catch { showError('ネットワークエラーが発生しました'); }
-    finally { setGenerating(false); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'AI生成に失敗しました';
+      showError(msg);
+      console.error('[handleGenerate]', e);
+    } finally { setGenerating(false); }
   }
 
   async function handleRegenerate(t: LineTemplate) {
@@ -101,11 +117,18 @@ export default function LineTemplatesPage() {
         method, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) { const j = await res.json(); showError(j.error ?? '保存に失敗しました'); return; }
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || '保存に失敗しました');
+      }
       success(editTarget ? '更新しました' : '保存しました');
       await fetchTemplates();
       closePanel();
-    } catch { showError('ネットワークエラーが発生しました'); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '保存に失敗しました';
+      showError(msg);
+      console.error('[handleSave]', e);
+    }
   }
 
   async function handleDelete(id: string) {
@@ -115,11 +138,18 @@ export default function LineTemplatesPage() {
   async function confirmDelete() {
     if (!deleteTarget) return;
     try {
-      await fetch(`/api/line/templates/${deleteTarget}`, { method: 'DELETE' });
+      const res = await fetch(`/api/line/templates/${deleteTarget}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || '削除に失敗しました');
+      }
       setTemplates((prev) => prev.filter((t) => t.id !== deleteTarget));
       success('削除しました');
-    } catch { showError('削除に失敗しました'); }
-    finally { setDeleteTarget(null); }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '削除に失敗しました';
+      showError(msg);
+      console.error('[confirmDelete]', e);
+    } finally { setDeleteTarget(null); }
   }
 
   function addQR()        { setFormQuickReplies((prev) => [...prev, { ...EMPTY_QR }]); }
@@ -153,6 +183,17 @@ export default function LineTemplatesPage() {
           <Plus size={15} /> 新規作成
         </button>
       </div>
+
+      {/* エラー表示 */}
+      {error && (
+        <div className="mb-5 flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertCircle size={16} className="shrink-0" />
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* カテゴリフィルター */}
       <div className="flex flex-wrap gap-2 mb-5">
@@ -209,6 +250,7 @@ export default function LineTemplatesPage() {
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">タイトル <span className="text-red-400">*</span></label>
                 <input value={formTitle} onChange={(e) => setFormTitle(e.target.value)}
+                  maxLength={100}
                   placeholder="例: 初回予約後の挨拶メッセージ"
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
               </div>
@@ -249,9 +291,10 @@ export default function LineTemplatesPage() {
                 <label className="block text-xs font-semibold text-slate-600 mb-1">メッセージ本文 <span className="text-red-400">*</span></label>
                 <textarea value={formMessage} onChange={(e) => setFormMessage(e.target.value)}
                   placeholder="LINE メッセージの本文を入力"
+                  maxLength={1000}
                   rows={8}
                   className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
-                <p className="text-xs text-slate-400 mt-1 text-right">{formMessage.length}字</p>
+                <p className="text-xs text-slate-400 mt-1 text-right">{formMessage.length} / 1000字</p>
               </div>
 
               {/* クイックリプライ */}
